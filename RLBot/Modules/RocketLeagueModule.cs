@@ -7,7 +7,7 @@ using Discord.WebSocket;
 
 namespace RLBot.Modules
 {
-    [Group("6man")]
+    [Group("queue")]
     public class RocketLeagueModule : ModuleBase<SocketCommandContext>
     {
         static List<SocketUser> six_man = new List<SocketUser>();
@@ -49,9 +49,48 @@ namespace RLBot.Modules
             }
         }
 
+        [Command("leave")]
+        [Summary("Leave the queue for 6man games.")]
+        public async Task LeaveQueueAsync()
+        {
+            if (!six_man_open)
+            {
+                await ReplyAsync("There is no open queue atm.");
+            }
+            else
+            {
+                var user = six_man.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault();
+                if (user != null)
+                {
+                    six_man.Remove(user);
+                    await ReplyAsync($"{Context.Message.Author.Mention} left the queue.");
+                }
+                else
+                {
+                    await ReplyAsync("You're not in the current queue.");
+                }
+            }
+        }
+
+        [Command("reset")]
+        [Summary("Reset the queue.")]
+        public async Task ResetQueueAsync()
+        {
+            if (!six_man_open)
+            {
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "6man open\", to start a new one.");
+            }
+            else
+            {
+                six_man.Clear();
+                six_man_open = false;
+                await ReplyAsync("The queue has been reset!");
+            }
+        }
+
         [Command("pick")]
         [Summary("Pick 6 random players from the queue and divide them into 2 teams.")]
-        public async Task RankAsync()
+        public async Task PickQueueAsync()
         {
             if (!six_man_open)
             {
@@ -76,10 +115,9 @@ namespace RLBot.Modules
                         }
                         six_man.Remove(six_man[rng]);
                     }
-
-                    await ReplyAsync($"Team A: {team_a[0].Mention}, {team_a[1].Mention}, {team_a[2].Mention}  // Team B: {team_b[0].Mention}, {team_b[1].Mention}, {team_b[2].Mention}");
-
+                    six_man.Clear();
                     six_man_open = false;
+                    await ReplyAsync($"Team A: {team_a[0].Mention}, {team_a[1].Mention}, {team_a[2].Mention}  // Team B: {team_b[0].Mention}, {team_b[1].Mention}, {team_b[2].Mention}");
                 }
                 else
                 {
