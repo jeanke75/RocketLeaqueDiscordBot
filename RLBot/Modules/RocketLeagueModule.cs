@@ -20,11 +20,11 @@ namespace RLBot.Modules
         {
             if (!six_man_open)
             {
-                await ReplyAsync("The queue is open. Type \"" + RLBot.prefix + "6man join\", to join it.");
+                await ReplyAsync("The queue is open. Type \"" + RLBot.prefix + "queue join\", to join it.");
                 six_man_open = true;
             }
             else
-                await ReplyAsync("There is already an active queue. Type \"" + RLBot.prefix + "6man join\", to join it.");
+                await ReplyAsync("There is already an active queue. Type \"" + RLBot.prefix + "queue join\", to join it.");
         }
 
         [Command("join")]
@@ -33,7 +33,7 @@ namespace RLBot.Modules
         {
             if (!six_man_open)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "6man open\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "queue open\", to start a new one.");
             }
             else
             {
@@ -78,7 +78,7 @@ namespace RLBot.Modules
         {
             if (!six_man_open)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "6man open\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "queue open\", to start a new one.");
             }
             else
             {
@@ -94,7 +94,7 @@ namespace RLBot.Modules
         {
             if (!six_man_open)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "6man open\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "queue open\", to start a new one.");
             }
             else
             {
