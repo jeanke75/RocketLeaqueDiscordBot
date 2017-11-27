@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -26,9 +27,6 @@ namespace RLBot
             _client = new DiscordSocketClient();
             _commands = new CommandService();
 
-            // Avoid hard coding your token. Use an external source instead in your code.
-            string token = "Mzg0NjYyNzc3NzczNTU1NzEy.DP2WKQ.AAXgciqP1aigVD8OdRyOqcVZbo4";
-
             _services = new ServiceCollection()
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
@@ -36,7 +34,7 @@ namespace RLBot
 
             await InstallCommandsAsync();
 
-            await _client.LoginAsync(TokenType.Bot, token);
+            await _client.LoginAsync(TokenType.Bot, ConfigurationManager.AppSettings["TOKEN"]);
             await _client.StartAsync();
 
             await Task.Delay(-1);
@@ -46,6 +44,7 @@ namespace RLBot
         {
             // Hook the MessageReceived Event into our Command Handler
             _client.MessageReceived += HandleCommandAsync;
+            _client.Log += Log;
             // Discover all of the commands in this assembly and load them.
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
         }
