@@ -143,6 +143,9 @@ namespace RLBot.Modules
             }
             else
             {
+                // remove offline users from the queue
+                queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
+
                 if (queue.users.Count >= 6)
                 {
                     List<SocketUser> team_a = new List<SocketUser>();
