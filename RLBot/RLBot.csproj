@@ -185,6 +185,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\RLQueue.cs" />
     <Compile Include="Modules\InfoModule.cs" />
     <Compile Include="Modules\RocketLeagueModule.cs" />
     <Compile Include="Program.cs" />
