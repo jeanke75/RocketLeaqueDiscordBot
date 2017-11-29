@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -63,7 +64,7 @@ namespace RLBot
             // Execute the command. (result does not indicate a return value, 
             // rather an object stating if the command executed successfully)
             var result = await _commands.ExecuteAsync(context, argPos, _services);
-            if (!result.IsSuccess)
+            if (!result.IsSuccess && result.Error != CommandError.UnknownCommand)
                 await context.Channel.SendMessageAsync(result.ErrorReason);
         }
 

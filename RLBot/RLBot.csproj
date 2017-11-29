@@ -187,7 +187,7 @@
   <ItemGroup>
     <Compile Include="Models\RLQueue.cs" />
     <Compile Include="Modules\InfoModule.cs" />
-    <Compile Include="Modules\RocketLeagueModule.cs" />
+    <Compile Include="Modules\RocketLeague\QueueModule.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RLBot.cs" />
