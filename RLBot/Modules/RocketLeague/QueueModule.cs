@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Discord.Net;
 using Discord.WebSocket;
 using RLBot.Models;
 
@@ -28,10 +29,15 @@ namespace RLBot.Modules.RocketLeague
                              "```";
             
             var dm_channel = await Context.Message.Author.GetOrCreateDMChannelAsync();
-            if (dm_channel != null)
+            try
+            {
                 await dm_channel.SendMessageAsync(message);
-            else
-                await ReplyAsync(message);
+            }
+            catch(HttpException ex)
+            {
+                // send message normally if dm's are blocked by receiver
+                if (ex.DiscordCode == 50007) await ReplyAsync(message);
+            }
         }
 
         [Command("qopen")]
