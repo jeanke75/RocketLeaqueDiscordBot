@@ -21,11 +21,12 @@ namespace RLBot.Modules.RocketLeague
         public async Task QueueInfoAsync()
         {
             string message = "```commands:\n" +
-                             "- new queue: !qopen or !qstart or !qo or !qs\n" +
+                             "- new queue: !qopen or !qo\n" +
                              "- join queue: !qjoin or !qplease or !qj or !qplz or !qpls\n" +
                              "- leave queue: !qleave or !ql\n" +
-                             "- reset queue: !qreset or !qr\n" +
-                             "- pick teams from queue (min. 6, clears queue): !qpick or !qp" +
+                             "- status of the queue: !qstatus or !qs\n" +
+                             "- reset queue (clears queue): !qreset or !qr\n" +
+                             "- pick teams from queue (min. 6, clears queue): !qpick or !qp\n" +
                              "- pick captains from queue (min. 2, clears queue): !qcaptain or !qc" +
                              "```";
             
@@ -43,7 +44,7 @@ namespace RLBot.Modules.RocketLeague
         }
 
         [Command("qopen")]
-        [Alias("qo", "qstart", "qs")]
+        [Alias("qo")]
         [Summary("Create a new queue from which two 3man teams will be picked.")]
         public async Task OpenQueueAsync()
         {
@@ -131,6 +132,38 @@ namespace RLBot.Modules.RocketLeague
                     await ReplyAsync("You're not in the current queue.");
                 }
             }
+        }
+
+        [Command("qstatus")]
+        [Alias("qs")]
+        [Summary("Show a list of all the people in the queue.")]
+        public async Task ListOfPlayersInQueueAsync()
+        {
+            if (!(Context.Channel is SocketGuildChannel))
+            {
+                await ReplyAsync("The queue cannot be used in a DM.");
+                return;
+            }
+
+            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            if (queue == null)
+            {
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "qopen\", to start a new one.");
+                return;
+            }
+
+            if (queue.users.Count == 0)
+            {
+                await ReplyAsync("There current queue is empty.");
+                return;
+            }
+
+            string users = string.Join(", ", queue.users);
+            var embed = new EmbedBuilder()
+                        .WithColor(Color.Default)
+                        .WithTitle("Current queue")
+                        .WithDescription(users);
+            await Context.Channel.SendMessageAsync("", embed: embed.Build());
         }
 
         [Command("qreset")]
@@ -233,7 +266,7 @@ namespace RLBot.Modules.RocketLeague
                 // remove offline users from the queue
                 queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
 
-                if (queue.users.Count >= 2)
+                if (queue.users.Count >= 6)
                 {
                     List<SocketUser> captains = new List<SocketUser>();
 
@@ -243,20 +276,22 @@ namespace RLBot.Modules.RocketLeague
                         captains.Add(queue.users[rng]);
                         queue.users.Remove(queue.users[rng]);
                     }
-                    queue.users.Clear();
-                    queues.Remove(queue);
 
                     var embed = new EmbedBuilder()
                         .WithColor(Color.Default)
                         .WithTitle("Inhouse captains")
                         .WithCurrentTimestamp()
                         .AddInlineField("Captain A", captains[0].Mention)
-                        .AddInlineField("Captain B", captains[1].Mention);
+                        .AddInlineField("Captain B", captains[1].Mention)
+                        .AddField("Remaining", string.Join(", ", queue.users.Select(x => x.Mention)));
                     await Context.Channel.SendMessageAsync("", embed: embed.Build());
+
+                    queue.users.Clear();
+                    queues.Remove(queue);
                 }
                 else
                 {
-                    await ReplyAsync($"Not enough players have joined the queue yet! {queue.users.Count}/2");
+                    await ReplyAsync($"Not enough players have joined the queue yet! {queue.users.Count}/6");
                 }
             }
         }
