@@ -7,16 +7,36 @@ using Discord.Commands;
 using Discord.WebSocket;
 using RLBot.Models;
 
-namespace RLBot.Modules
+namespace RLBot.Modules.RocketLeague
 {
-    [Group("queue")]
-    public class RocketLeagueModule : ModuleBase<SocketCommandContext>
+    public class QueueModule : ModuleBase<SocketCommandContext>
     {
         static List<RLQueue> queues = new List<RLQueue>();
         static Random rnd = new Random();
 
-        [Command("open")]
-        [Summary("Open the queue for players to join 6man games.")]
+        [Command("qinfo")]
+        [Alias("qi", "qhelp", "qh")]
+        [Summary("Shows a list of all the queue commands and how to use them.")]
+        public async Task QueueInfoAsync()
+        {
+            string message = "```commands:\n" +
+                             "- new queue: !qopen or !qstart or !qo or !qs\n" +
+                             "- join queue: !qjoin or !qplease or !qj or !qplz or !qpls\n" +
+                             "- leave queue: !qleave or !ql\n" +
+                             "- reset queue: !qreset or !qr\n" +
+                             "- pick teams from queue: !qpick or !qp" +
+                             "```";
+            
+            var dm_channel = await Context.Message.Author.GetOrCreateDMChannelAsync();
+            if (dm_channel != null)
+                await dm_channel.SendMessageAsync(message);
+            else
+                await ReplyAsync(message);
+        }
+
+        [Command("qopen")]
+        [Alias("qo", "qstart", "qs")]
+        [Summary("Create a new queue from which two 3man teams will be picked.")]
         public async Task OpenQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -37,14 +57,15 @@ namespace RLBot.Modules
             if (!queue.isOpen)
             {
                 queue.isOpen = true;
-                await ReplyAsync("The queue is open. Type \"" + RLBot.prefix + "queue join\", to join it.");
+                await ReplyAsync("The queue is open. Type \"" + RLBot.prefix + "qopen\", to join it.");
                 
             }
             else
                 await ReplyAsync("There is already an active queue. Type \"" + RLBot.prefix + "queue join\", to join it.");
         }
 
-        [Command("join")]
+        [Command("qjoin")]
+        [Alias("qj", "qplease", "qpls", "qplz")]
         [Summary("Join the queue for 6man games.")]
         public async Task JoinQueueAsync()
         {
@@ -73,7 +94,8 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("leave")]
+        [Command("qleave")]
+        [Alias("ql")]
         [Summary("Leave the queue for 6man games.")]
         public async Task LeaveQueueAsync()
         {
@@ -103,7 +125,8 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("reset")]
+        [Command("qreset")]
+        [Alias("qr")]
         [Summary("Reset the queue.")]
         public async Task ResetQueueAsync()
         {
@@ -126,7 +149,8 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("pick")]
+        [Command("qpick")]
+        [Alias("qp")]
         [Summary("Pick 6 random players from the queue and divide them into 2 teams.")]
         public async Task PickQueueAsync()
         {
