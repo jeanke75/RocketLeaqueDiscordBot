@@ -25,7 +25,8 @@ namespace RLBot.Modules.RocketLeague
                              "- join queue: !qjoin or !qplease or !qj or !qplz or !qpls\n" +
                              "- leave queue: !qleave or !ql\n" +
                              "- reset queue: !qreset or !qr\n" +
-                             "- pick teams from queue: !qpick or !qp" +
+                             "- pick teams from queue (min. 6, clears queue): !qpick or !qp" +
+                             "- pick captains from queue (min. 2, clears queue): !qcaptain or !qc" +
                              "```";
             
             var dm_channel = await Context.Message.Author.GetOrCreateDMChannelAsync();
@@ -34,9 +35,10 @@ namespace RLBot.Modules.RocketLeague
                 await dm_channel.SendMessageAsync(message);
             }
             catch(HttpException ex)
+            when(ex.DiscordCode == 50007)
             {
                 // send message normally if dm's are blocked by receiver
-                if (ex.DiscordCode == 50007) await ReplyAsync(message);
+                await ReplyAsync(message);
             }
         }
 
@@ -158,7 +160,7 @@ namespace RLBot.Modules.RocketLeague
         [Command("qpick")]
         [Alias("qp")]
         [Summary("Pick 6 random players from the queue and divide them into 2 teams.")]
-        public async Task PickQueueAsync()
+        public async Task PickTeamsFromQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
             {
@@ -199,15 +201,62 @@ namespace RLBot.Modules.RocketLeague
                     var embed = new EmbedBuilder()
                         .WithColor(Color.Default)
                         .WithTitle("Inhouse 3v3 teams")
-                        .WithCurrentTimestamp()
                         .AddInlineField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}")
                         .AddInlineField("Team B", $"{team_b[0].Mention}\n{team_b[1].Mention}\n{team_b[2].Mention}");
                     await Context.Channel.SendMessageAsync("", embed: embed.Build());
-                    //await ReplyAsync($"Team A: {team_a[0].Mention}, {team_a[1].Mention}, {team_a[2].Mention}  // Team B: {team_b[0].Mention}, {team_b[1].Mention}, {team_b[2].Mention}");
                 }
                 else
                 {
                     await ReplyAsync($"Not enough players have joined the queue yet! {queue.users.Count}/6");
+                }
+            }
+        }
+
+        [Command("qcaptain")]
+        [Alias("qc")]
+        [Summary("Pick 2 random captains from the queue.")]
+        public async Task PickCaptainsFromQueueAsync()
+        {
+            if (!(Context.Channel is SocketGuildChannel))
+            {
+                await ReplyAsync("The queue cannot be used in a DM.");
+                return;
+            }
+
+            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            if (queue == null || !queue.isOpen)
+            {
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "qopen\", to start a new one.");
+            }
+            else
+            {
+                // remove offline users from the queue
+                queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
+
+                if (queue.users.Count >= 2)
+                {
+                    List<SocketUser> captains = new List<SocketUser>();
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        int rng = rnd.Next(0, queue.users.Count);
+                        captains.Add(queue.users[rng]);
+                        queue.users.Remove(queue.users[rng]);
+                    }
+                    queue.users.Clear();
+                    queues.Remove(queue);
+
+                    var embed = new EmbedBuilder()
+                        .WithColor(Color.Default)
+                        .WithTitle("Inhouse captains")
+                        .WithCurrentTimestamp()
+                        .AddInlineField("Captain A", captains[0].Mention)
+                        .AddInlineField("Captain B", captains[1].Mention);
+                    await Context.Channel.SendMessageAsync("", embed: embed.Build());
+                }
+                else
+                {
+                    await ReplyAsync($"Not enough players have joined the queue yet! {queue.users.Count}/2");
                 }
             }
         }
