@@ -69,8 +69,8 @@ namespace RLBot.Modules
                     $"**Total Users:** {_client.Guilds.Sum(g => g.Users.Where(b => !b.IsBot).Count())}")
                 .AddField("Process Info",
                     $"**Runtime:** {RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}\n" +
-                    $"**Heap Size:** {Math.Round(GC.GetTotalMemory(true) / (1024.0 * 1024.0), 2).ToString()}\n" +
-                    $"**Uptime**: {(DateTime.Now - Process.GetCurrentProcess().StartTime).ToString(@"d\d\ h\h\ m\m\ s\s")}MB")
+                    $"**Heap Size:** {Math.Round(GC.GetTotalMemory(true) / (1024.0 * 1024.0), 2).ToString()}MB\n" +
+                    $"**Uptime**: {(DateTime.Now - Process.GetCurrentProcess().StartTime).ToString(@"d\d\ h\h\ m\m\ s\s")}")
                 .AddField("Latest Changes on Github", latestChanges)
                 .Build());
         }
