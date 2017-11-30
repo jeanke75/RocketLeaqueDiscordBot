@@ -1,11 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+
 using Discord;
-using Discord.Commands;
 using Discord.Net;
+using Discord.Commands;
 using Discord.WebSocket;
+
 using RLBot.Models;
 
 namespace RLBot.Modules.RocketLeague
@@ -66,11 +68,11 @@ namespace RLBot.Modules.RocketLeague
             if (!queue.isOpen)
             {
                 queue.isOpen = true;
-                await ReplyAsync("The queue is open. Type \"" + RLBot.prefix + "qjoin\", to join it.");
+                await ReplyAsync("The queue is open. Type \"" + RLBot.botPrefix + "qjoin\", to join it.");
                 
             }
             else
-                await ReplyAsync("There is already an active queue. Type \"" + RLBot.prefix + "qjoin\", to join it.");
+                await ReplyAsync("There is already an active queue. Type \"" + RLBot.botPrefix + "qjoin\", to join it.");
         }
 
         [Command("qjoin")]
@@ -87,7 +89,7 @@ namespace RLBot.Modules.RocketLeague
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null || !queue.isOpen)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "qopen\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.botPrefix + "qopen\", to start a new one.");
             }
             else
             {
@@ -148,7 +150,7 @@ namespace RLBot.Modules.RocketLeague
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "qopen\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.botPrefix + "qopen\", to start a new one.");
                 return;
             }
 
@@ -180,7 +182,7 @@ namespace RLBot.Modules.RocketLeague
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null || !queue.isOpen)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "qopen\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.botPrefix + "qopen\", to start a new one.");
             }
             else
             {
@@ -204,7 +206,7 @@ namespace RLBot.Modules.RocketLeague
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null || !queue.isOpen)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "qopen\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.botPrefix + "qopen\", to start a new one.");
             }
             else
             {
@@ -259,7 +261,7 @@ namespace RLBot.Modules.RocketLeague
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null || !queue.isOpen)
             {
-                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.prefix + "qopen\", to start a new one.");
+                await ReplyAsync("There is no open queue atm. Type \"" + RLBot.botPrefix + "qopen\", to start a new one.");
             }
             else
             {
