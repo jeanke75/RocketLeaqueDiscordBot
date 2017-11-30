@@ -9,6 +9,5 @@ namespace RLBot.Models
         public DateTime created;
         public SocketGuildChannel channel;
         public List<SocketUser> users = new List<SocketUser>();
-        public bool isOpen = false;
     }
 }

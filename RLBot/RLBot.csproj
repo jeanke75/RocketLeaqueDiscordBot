@@ -188,9 +188,11 @@
     <Compile Include="Models\RLQueue.cs" />
     <Compile Include="Modules\InfoModule.cs" />
     <Compile Include="Modules\RocketLeague\QueueModule.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RLBot.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\CommandHandler.cs" />
+    <Compile Include="Services\Handler.cs" />
+    <Compile Include="Services\ReactionHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
