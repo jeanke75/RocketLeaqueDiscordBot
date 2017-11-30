@@ -185,6 +185,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandHandler.cs" />
     <Compile Include="Models\RLQueue.cs" />
     <Compile Include="Modules\InfoModule.cs" />
     <Compile Include="Modules\RocketLeague\QueueModule.cs" />

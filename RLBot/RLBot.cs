@@ -1,76 +1,54 @@
 ﻿using System;
 using System.Configuration;
-using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
+
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace RLBot
 {
     public class RLBot
     {
-        private CommandService _commands;
-        private DiscordSocketClient _client;
-        private IServiceProvider _services;
-        public const char prefix = '!';
+        private DiscordSocketClient _Client;
+        private CommandService _Commands;
 
-        public async Task RunAndBlockAsync(params string[] args)
+        public const char botPrefix = '!';
+
+        public async Task StartAsync()
         {
-            await StartAsync(args).ConfigureAwait(false);
-            await Task.Delay(-1).ConfigureAwait(false);
-        }
+            _Client = new DiscordSocketClient();
+            _Commands = new CommandService();
 
-        private async Task StartAsync(params string[] args)
-        {
-            _client = new DiscordSocketClient();
-            _commands = new CommandService();
+            var serv = InstallServices();
+            await serv.GetRequiredService<CommandHandler>().InitAsync(serv);
 
-            _services = new ServiceCollection()
-                .AddSingleton(_client)
-                .AddSingleton(_commands)
-                .BuildServiceProvider();
+            _Client.Log += Log;
+            _Commands.Log += Log;
 
-            await InstallCommandsAsync();
+            await _Client.LoginAsync(TokenType.Bot, ConfigurationManager.AppSettings["TOKEN"]);
+            await _Client.StartAsync();
 
-            await _client.LoginAsync(TokenType.Bot, ConfigurationManager.AppSettings["TOKEN"]);
-            await _client.StartAsync();
+            await _Client.SetGameAsync(ConfigurationManager.AppSettings["GAME"]);
 
             await Task.Delay(-1);
         }
 
-        public async Task InstallCommandsAsync()
+        private IServiceProvider InstallServices()
         {
-            // Hook the MessageReceived Event into our Command Handler
-            _client.MessageReceived += HandleCommandAsync;
-            _client.Log += Log;
-            // Discover all of the commands in this assembly and load them.
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
-        }
-
-        private async Task HandleCommandAsync(SocketMessage messageParam)
-        {
-            // Don't process the command if it was a System Message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
-            // Create a number to track where the prefix ends and the command begins
-            int argPos = 0;
-            // Determine if the message is a command, based on if it starts with '!' or a mention prefix
-            if (!(message.HasCharPrefix(prefix, ref argPos) || message.HasMentionPrefix(_client.CurrentUser, ref argPos))) return;
-            // Create a Command Context
-            var context = new SocketCommandContext(_client, message);
-            // Execute the command. (result does not indicate a return value, 
-            // rather an object stating if the command executed successfully)
-            var result = await _commands.ExecuteAsync(context, argPos, _services);
-            if (!result.IsSuccess && result.Error != CommandError.UnknownCommand)
-                await context.Channel.SendMessageAsync(result.ErrorReason);
+            return new ServiceCollection()
+                .AddSingleton(_Client)
+                .AddSingleton(_Commands)
+                .AddSingleton<CommandHandler>()
+                //
+                .BuildServiceProvider();
         }
 
         private Task Log(LogMessage msg)
         {
-            Console.WriteLine(msg.ToString());
+            Console.WriteLine(string.Concat("[", DateTime.Now.ToString("dd/MM/yyyy - HH:mm:ss"), "] [", msg.Severity, "] ", msg.Message, msg.Exception));
             return Task.CompletedTask;
         }
     }
