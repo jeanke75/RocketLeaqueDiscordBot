@@ -22,11 +22,14 @@ namespace RLBot
 
         private async Task StartAsync(params string[] args)
         {
-            _client = new DiscordSocketClient();
+            _client = new DiscordSocketClient(new DiscordSocketConfig{
+                LogLevel = LogSeverity.Info
+            });
             _commands = new CommandService();
 
             var serv = InstallServices();
             await serv.GetRequiredService<CommandHandler>().InitAsync();
+            await serv.GetRequiredService<ReactionHandler>().InitAsync();
 
             _client.Log += Log;
             _commands.Log += Log;
@@ -45,10 +48,11 @@ namespace RLBot
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
                 .AddSingleton<CommandHandler>()
+                .AddSingleton<ReactionHandler>()
                 .BuildServiceProvider();
         }
 
-        private Task Log(LogMessage msg)
+        public static Task Log(LogMessage msg)
         {
             Console.WriteLine(string.Concat("[", DateTime.Now.ToString("dd/MM/yyyy - HH:mm:ss"), "] [", msg.Severity, "] ", msg.Message, msg.Exception));
             return Task.CompletedTask;
