@@ -11,6 +11,8 @@ using Newtonsoft.Json.Linq;
 
 namespace RLBot.Modules
 {
+    [Name("Info")]
+    [Summary("General information")]
     public class InfoModule : ModuleBase<SocketCommandContext>
     {
         private readonly DiscordSocketClient _client;
@@ -22,6 +24,7 @@ namespace RLBot.Modules
 
         [Command("invite")]
         [Summary("Returns the OAuth2 Invite URL of the bot")]
+        [Remarks("invite")]
         public async Task Invite()
         {
             var application = await Context.Client.GetApplicationInfoAsync();
@@ -29,11 +32,14 @@ namespace RLBot.Modules
         }
 
         [Command("ping")]
-        [Summary("Check if the bot is still running.")]
+        [Summary("Ping to see the latency")]
+        [Remarks("ping")]
         public async Task PingAsync()
             => await ReplyAsync($"Pong! - {_client.Latency}ms");
 
         [Command("botinfo")]
+        [Summary("General info about the bot")]
+        [Remarks("botinfo")]
         public async Task InfoAsync()
         {
             var application = await _client.GetApplicationInfoAsync();
@@ -76,8 +82,9 @@ namespace RLBot.Modules
         }
 
         [Command("userinfo")]
-        [Summary("Returns info about the current user, or the user parameter, if one passed.")]
         [Alias("user", "whois")]
+        [Summary("Returns info about the current user, or the user parameter, if one passed.")]
+        [Remarks("userinfo (<user>)")]
         public async Task UserInfoAsync([Summary("The (optional) user to get info for")] SocketUser user = null)
         {
             var userInfo = user ?? Context.Client.CurrentUser;

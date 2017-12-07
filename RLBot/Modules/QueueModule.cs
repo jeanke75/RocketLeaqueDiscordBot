@@ -4,12 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
-using Discord.Net;
 using Discord.WebSocket;
 using RLBot.Models;
 
-namespace RLBot.Modules.RocketLeague
+namespace RLBot.Modules
 {
+    [Name("Queue")]
+    [Summary("Creation and utilization of a queue")]
     public class QueueModule : ModuleBase<SocketCommandContext>
     {
         static List<RLQueue> queues = new List<RLQueue>();
@@ -18,10 +19,10 @@ namespace RLBot.Modules.RocketLeague
         readonly string NOT_OPEN = "There is no open queue atm. Type \"" + RLBot.COMMAND_PREFIX + "qopen\", to start a new one.";
         readonly string NOT_ENOUGH_PLAYERS = "Not enough players have joined the queue yet! {0}/6";
 
-
-        [Command("qinfo")]
+        /*[Command("qinfo")]
         [Alias("qi", "qhelp", "qh")]
-        [Summary("Shows a list of all the queue commands and how to use them.")]
+        [Summary("Shows a list of all the queue commands and how to use them")]
+        [Remarks("qinfo")]
         public async Task QueueInfoAsync()
         {
             string message = "```commands:\n" +
@@ -45,11 +46,12 @@ namespace RLBot.Modules.RocketLeague
                 // send message normally if dm's are blocked by receiver
                 await ReplyAsync(message);
             }
-        }
+        }*/
 
         [Command("qopen")]
         [Alias("qo")]
-        [Summary("Create a new queue from which two 3man teams will be picked.")]
+        [Summary("Create a new queue from which two 3man teams will be picked")]
+        [Remarks("qopen")]
         public async Task OpenQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -74,7 +76,8 @@ namespace RLBot.Modules.RocketLeague
 
         [Command("qjoin")]
         [Alias("qj")]
-        [Summary("Join the queue for 6man games.")]
+        [Summary("Join the queue for 6man games")]
+        [Remarks("qjoin")]
         public async Task JoinQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -87,31 +90,27 @@ namespace RLBot.Modules.RocketLeague
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
+                return;
             }
-            else
+
+            if (queue.users.Count < 6)
             {
-                if (queue.users.Count < 6)
+                if (queue.users.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault() == null)
                 {
-                    if (queue.users.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault() == null)
-                    {
-                        queue.users.Add(Context.Message.Author);
-                        await ReplyAsync($"{Context.Message.Author.Mention} joined the queue.");
-                    }
-                    else
-                    {
-                        await ReplyAsync("You've already joined the queue.");
-                    }
+                    queue.users.Add(Context.Message.Author);
+                    await ReplyAsync($"{Context.Message.Author.Mention} joined the queue.");
                 }
                 else
-                {
-                    await ReplyAsync("The queue is full.");
-                }
+                    await ReplyAsync("You've already joined the queue.");
             }
+            else
+                await ReplyAsync("The queue is full.");
         }
 
         [Command("qleave")]
         [Alias("ql")]
-        [Summary("Leave the queue for 6man games.")]
+        [Summary("Leave the queue for 6man games")]
+        [Remarks("qleave")]
         public async Task LeaveQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -122,9 +121,7 @@ namespace RLBot.Modules.RocketLeague
 
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
-            {
                 await ReplyAsync("There is no active queue.");
-            }
             else
             {
                 var user = queue.users.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault();
@@ -134,15 +131,14 @@ namespace RLBot.Modules.RocketLeague
                     await ReplyAsync($"{Context.Message.Author.Mention} left the queue.");
                 }
                 else
-                {
                     await ReplyAsync("You're not in the current queue.");
-                }
             }
         }
 
         [Command("qstatus")]
         [Alias("qs")]
-        [Summary("Show a list of all the people in the queue.")]
+        [Summary("Show a list of all the people in the queue")]
+        [Remarks("qstatus")]
         public async Task ListOfPlayersInQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -174,7 +170,8 @@ namespace RLBot.Modules.RocketLeague
 
         [Command("qreset")]
         [Alias("qr")]
-        [Summary("Reset the queue.")]
+        [Summary("Removes the current queue")]
+        [Remarks("qreset")]
         public async Task ResetQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -187,18 +184,18 @@ namespace RLBot.Modules.RocketLeague
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
+                return;
             }
-            else
-            {
-                queue.users.Clear();
-                queues.Remove(queue);
-                await ReplyAsync("The queue has been reset!");
-            }
+
+            queue.users.Clear();
+            queues.Remove(queue);
+            await ReplyAsync("The queue has been reset!");
         }
 
         [Command("qpick")]
         [Alias("qp")]
-        [Summary("Pick 6 random players from the queue and divide them into 2 teams.")]
+        [Summary("Randomly divide the 6 players into 2 even teams")]
+        [Remarks("qpick")]
         public async Task PickTeamsFromQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -211,49 +208,44 @@ namespace RLBot.Modules.RocketLeague
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
+                return;
+            }
+
+            // remove offline users from the queue
+            queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
+
+            if (queue.users.Count == 6)
+            {
+                List<SocketUser> team_a = new List<SocketUser>();
+                List<SocketUser> team_b = new List<SocketUser>();
+                for (int i = 0; i < 6; i++)
+                {
+                    int rng = rnd.Next(0, queue.users.Count);
+                    if (i % 2 == 0)
+                        team_a.Add(queue.users[rng]);
+                    else
+                        team_b.Add(queue.users[rng]);
+                    
+                    queue.users.Remove(queue.users[rng]);
+                }
+                queue.users.Clear();
+                queues.Remove(queue);
+
+                await ReplyAsync("", embed: new EmbedBuilder()
+                    .WithColor(RLBot.EMBED_COLOR)
+                    .WithTitle("Inhouse 3v3 teams")
+                    .AddInlineField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}")
+                    .AddInlineField("Team B", $"{team_b[0].Mention}\n{team_b[1].Mention}\n{team_b[2].Mention}")
+                    .Build());
             }
             else
-            {
-                // remove offline users from the queue
-                queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
-
-                if (queue.users.Count == 6)
-                {
-                    List<SocketUser> team_a = new List<SocketUser>();
-                    List<SocketUser> team_b = new List<SocketUser>();
-                    for (int i = 0; i < 6; i++)
-                    {
-                        int rng = rnd.Next(0, queue.users.Count);
-                        if (i % 2 == 0)
-                        {
-                            team_a.Add(queue.users[rng]);
-                        }
-                        else
-                        {
-                            team_b.Add(queue.users[rng]);
-                        }
-                        queue.users.Remove(queue.users[rng]);
-                    }
-                    queue.users.Clear();
-                    queues.Remove(queue);
-
-                    await ReplyAsync("", embed: new EmbedBuilder()
-                        .WithColor(RLBot.EMBED_COLOR)
-                        .WithTitle("Inhouse 3v3 teams")
-                        .AddInlineField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}")
-                        .AddInlineField("Team B", $"{team_b[0].Mention}\n{team_b[1].Mention}\n{team_b[2].Mention}")
-                        .Build());
-                }
-                else
-                {
-                    await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
-                }
-            }
+                await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
         }
 
         [Command("qcaptain")]
         [Alias("qc")]
-        [Summary("Pick 2 random captains from the queue.")]
+        [Summary("Randomly select 2 captains from the queue")]
+        [Remarks("qcaptain")]
         public async Task PickCaptainsFromQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -266,39 +258,36 @@ namespace RLBot.Modules.RocketLeague
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
+                return;
+            }
+
+            // remove offline users from the queue
+            queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
+
+            if (queue.users.Count == 6)
+            {
+                List<SocketUser> captains = new List<SocketUser>();
+
+                for (int i = 0; i < 2; i++)
+                {
+                    int rng = rnd.Next(0, queue.users.Count);
+                    captains.Add(queue.users[rng]);
+                    queue.users.Remove(queue.users[rng]);
+                }
+
+                await ReplyAsync("", embed: new EmbedBuilder()
+                    .WithColor(RLBot.EMBED_COLOR)
+                    .WithTitle("Inhouse captains")
+                    .AddInlineField("Captain A", captains[0].Mention)
+                    .AddInlineField("Captain B", captains[1].Mention)
+                    .AddField("Remaining", string.Join(", ", queue.users.Select(x => x.Mention)))
+                    .Build());
+
+                queue.users.Clear();
+                queues.Remove(queue);
             }
             else
-            {
-                // remove offline users from the queue
-                queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
-
-                if (queue.users.Count == 6)
-                {
-                    List<SocketUser> captains = new List<SocketUser>();
-
-                    for (int i = 0; i < 2; i++)
-                    {
-                        int rng = rnd.Next(0, queue.users.Count);
-                        captains.Add(queue.users[rng]);
-                        queue.users.Remove(queue.users[rng]);
-                    }
-
-                    await ReplyAsync("", embed: new EmbedBuilder()
-                        .WithColor(RLBot.EMBED_COLOR)
-                        .WithTitle("Inhouse captains")
-                        .AddInlineField("Captain A", captains[0].Mention)
-                        .AddInlineField("Captain B", captains[1].Mention)
-                        .AddField("Remaining", string.Join(", ", queue.users.Select(x => x.Mention)))
-                        .Build());
-
-                    queue.users.Clear();
-                    queues.Remove(queue);
-                }
-                else
-                {
-                    await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
-                }
-            }
+                await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
         }
     }
 }
