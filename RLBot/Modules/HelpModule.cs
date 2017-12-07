@@ -2,11 +2,13 @@
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using RLBot.Preconditions;
 
 namespace RLBot.Modules
 {
     [Name("Help")]
     [Group("help")]
+    [Hidden]
     public class HelpModule : ModuleBase<SocketCommandContext>
     {
         private readonly CommandService commands;
@@ -22,7 +24,7 @@ namespace RLBot.Modules
         public async Task HelpAsync()
         {
             string mList = "";
-            foreach (var module in commands.Modules)
+            foreach (var module in commands.Modules.Where(m => m.Attributes.FirstOrDefault(a => a.GetType() == typeof(HiddenAttribute)) == null))
                 mList += string.Concat($"**► Name: {module.Name}** ││", $"{module.Summary}", "\n\n");
 
             await ReplyAsync("", embed: new EmbedBuilder()

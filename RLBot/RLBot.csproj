@@ -186,8 +186,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\RLQueue.cs" />
+    <Compile Include="Modules\HelpModule.cs" />
     <Compile Include="Modules\InfoModule.cs" />
-    <Compile Include="Modules\RocketLeague\QueueModule.cs" />
+    <Compile Include="Modules\QueueModule.cs" />
+    <Compile Include="Modules\SupportModule.cs" />
+    <Compile Include="Preconditions\CooldownAttribute.cs" />
+    <Compile Include="Preconditions\HiddenAttribute.cs" />
     <Compile Include="RLBot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\CommandHandler.cs" />
