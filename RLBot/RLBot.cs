@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Configuration;
+using System.Data.SqlClient;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -17,6 +19,7 @@ namespace RLBot
 
         public static readonly char COMMAND_PREFIX = '!';
         public static readonly Color EMBED_COLOR = Color.Red;
+        public static readonly ulong APPLICATION_OWNER_ID = 140470317440040960;
 
         public static void Main(string[] args)
            => new RLBot().StartAsync(args).GetAwaiter().GetResult();
@@ -58,6 +61,20 @@ namespace RLBot
         {
             Console.WriteLine(string.Concat("[", DateTime.Now.ToString("dd/MM/yyyy - HH:mm:ss"), "] [", msg.Severity, "] ", msg.Message, msg.Exception));
             return Task.CompletedTask;
+        }
+
+        public static SqlConnection GetSqlConnection()
+        {
+            Uri uri = new Uri(ConfigurationManager.AppSettings["SQLSERVER_URI"]);
+            string connectionString = new SqlConnectionStringBuilder
+            {
+                DataSource = uri.Host,
+                InitialCatalog = uri.AbsolutePath.Trim('/'),
+                UserID = uri.UserInfo.Split(':').First(),
+                Password = uri.UserInfo.Split(':').Last(),
+            }.ConnectionString;
+
+            return new SqlConnection(connectionString);
         }
     }
 }

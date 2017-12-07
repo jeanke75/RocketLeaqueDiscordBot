@@ -186,6 +186,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\RLQueue.cs" />
+    <Compile Include="Modules\DatabaseModule.cs" />
     <Compile Include="Modules\HelpModule.cs" />
     <Compile Include="Modules\InfoModule.cs" />
     <Compile Include="Modules\QueueModule.cs" />
