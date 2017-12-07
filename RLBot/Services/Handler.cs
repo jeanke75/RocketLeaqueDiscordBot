@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Reflection;
-using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
 
@@ -17,11 +15,6 @@ namespace RLBot.Services
             _client = client;
             _commands = commands;
             _services = services;
-        }
-
-        public async Task InitAsync()
-        {
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
         }
     }
 }

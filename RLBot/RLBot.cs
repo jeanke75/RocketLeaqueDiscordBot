@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -26,10 +27,11 @@ namespace RLBot
                 LogLevel = LogSeverity.Info
             });
             _commands = new CommandService();
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
 
             var serv = InstallServices();
-            await serv.GetRequiredService<CommandHandler>().InitAsync();
-            await serv.GetRequiredService<ReactionHandler>().InitAsync();
+            serv.GetRequiredService<CommandHandler>();
+            serv.GetRequiredService<ReactionHandler>();
 
             _client.Log += Log;
             _commands.Log += Log;
