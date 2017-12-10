@@ -72,6 +72,7 @@ namespace RLBot
                 InitialCatalog = uri.AbsolutePath.Trim('/'),
                 UserID = uri.UserInfo.Split(':').First(),
                 Password = uri.UserInfo.Split(':').Last(),
+                MultipleActiveResultSets = true
             }.ConnectionString;
 
             return new SqlConnection(connectionString);
