@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Discord.Net;
 using RLBot.Preconditions;
 
 namespace RLBot.Modules
@@ -27,11 +28,21 @@ namespace RLBot.Modules
             foreach (var module in commands.Modules.Where(m => m.Attributes.FirstOrDefault(a => a.GetType() == typeof(HiddenAttribute)) == null))
                 mList += string.Concat($"**► Name: {module.Name}** ││", $"{module.Summary}", "\n\n");
 
-            await ReplyAsync("", embed: new EmbedBuilder()
+            var embed = new EmbedBuilder()
                         .WithColor(RLBot.EMBED_COLOR)
                         .WithDescription(mList)
                         .WithFooter($"For a module's commands - Use {RLBot.COMMAND_PREFIX}help module <module name>")
-                        .Build());
+                        .Build();
+            try
+            {
+                await Context.Message.Author.SendMessageAsync("", false, embed);
+            }
+            catch (HttpException ex)
+            when (ex.DiscordCode == 50007)
+            {
+                // send message normally if dm's are blocked by receiver
+                await ReplyAsync("", false, embed);
+            }
         }
 
         [Command("module")]
@@ -44,18 +55,37 @@ namespace RLBot.Modules
 
             if (module == null)
             {
-                await Context.Channel.SendMessageAsync($"`{moduleName}` is an invalid module! :mag:");
+                string msg = $"`{moduleName}` is an invalid module! :mag:";
+                try
+                {
+                    await Context.Message.Author.SendMessageAsync(msg);
+                }
+                catch (HttpException ex)
+                when (ex.DiscordCode == 50007)
+                {
+                    await Context.Channel.SendMessageAsync(msg);
+                }
                 return;
             }
 
             foreach (var command in module.Commands)
                 cList += string.Concat($"**► Name: {command.Name}**\n", $"• Summary: {command.Summary}\n\n");
 
-            await ReplyAsync("", embed: new EmbedBuilder()
+            var embed = new EmbedBuilder()
                         .WithColor(RLBot.EMBED_COLOR)
                         .WithDescription(cList)
                         .WithFooter($"For a command's details - Use {RLBot.COMMAND_PREFIX}help command <command name>")
-                        .Build());
+                        .Build();
+            try
+            {
+                await Context.Message.Author.SendMessageAsync("", false, embed);
+            }
+            catch (HttpException ex)
+            when (ex.DiscordCode == 50007)
+            {
+                // send message normally if dm's are blocked by receiver
+                await ReplyAsync("", false, embed);
+            }
         }
 
         [Command("command")]
@@ -68,7 +98,16 @@ namespace RLBot.Modules
 
             if (result.Commands == null)
             {
-                await ReplyAsync($"`{c}` is an invalid command! :mag:");
+                var msg = $"`{c}` is an invalid command! :mag:";
+                try
+                {
+                    await Context.Message.Author.SendMessageAsync(msg);
+                }
+                catch (HttpException ex)
+                when (ex.DiscordCode == 50007)
+                {
+                    await ReplyAsync(msg);
+                }
                 return;
             }
 
@@ -78,10 +117,21 @@ namespace RLBot.Modules
                 cDetails += $"**► Name: {cmd.Command.Name}**\n• Aliases: {aliases}\n• Summary: {cmd.Command.Summary}\n• Usage: {RLBot.COMMAND_PREFIX + cmd.Command.Remarks}";
             }
 
-            await ReplyAsync("", embed: new EmbedBuilder()
+            var embed = new EmbedBuilder()
                         .WithColor(RLBot.EMBED_COLOR)
                         .WithDescription(cDetails)
-                        .Build());
+                        .Build();
+            
+            try
+            {
+                await Context.Message.Author.SendMessageAsync("", false, embed);
+            }
+            catch (HttpException ex)
+            when (ex.DiscordCode == 50007)
+            {
+                // send message normally if dm's are blocked by receiver
+                await ReplyAsync("", false, embed);
+            }
         }
     }
 }
