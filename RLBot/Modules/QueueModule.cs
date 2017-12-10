@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -19,35 +21,10 @@ namespace RLBot.Modules
         readonly string NOT_OPEN = "There is no open queue atm. Type \"" + RLBot.COMMAND_PREFIX + "qopen\", to start a new one.";
         readonly string NOT_ENOUGH_PLAYERS = "Not enough players have joined the queue yet! {0}/6";
 
-        /*[Command("qinfo")]
-        [Alias("qi", "qhelp", "qh")]
-        [Summary("Shows a list of all the queue commands and how to use them")]
-        [Remarks("qinfo")]
-        public async Task QueueInfoAsync()
-        {
-            string message = "```commands:\n" +
-                             "- new queue: !qopen or !qo\n" +
-                             "- join queue: !qjoin or !qj\n" +
-                             "- leave queue: !qleave or !ql\n" +
-                             "- status of the queue: !qstatus or !qs\n" +
-                             "- reset queue (clears queue): !qreset or !qr\n" +
-                             "- pick teams from queue (min. 6, clears queue): !qpick or !qp\n" +
-                             "- pick captains from queue (min. 2, clears queue): !qcaptain or !qc" +
-                             "```";
-            
-            var dm_channel = await Context.Message.Author.GetOrCreateDMChannelAsync();
-            try
-            {
-                await dm_channel.SendMessageAsync(message);
-            }
-            catch(HttpException ex)
-            when(ex.DiscordCode == 50007)
-            {
-                // send message normally if dm's are blocked by receiver
-                await ReplyAsync(message);
-            }
-        }*/
-
+        readonly string DB_QUEUE_SELECT = "SELECT * FROM Queue WHERE QueueID = @QueueID;";
+        readonly string DB_QUEUEPLAYER_SELECT = "SELECT * FROM QueuePlayer WHERE QueueID = @QueueID AND UserID = @UserID;";
+        readonly string DB_QUEUE_UPDATE = "UPDATE Queue SET ScoreTeamA = @ScoreTeamA, ScoreTeamB = @ScoreTeamB WHERE QueueID = @QueueID;";
+        
         [Command("qopen")]
         [Alias("qo")]
         [Summary("Create a new queue from which two 3man teams will be picked")]
@@ -231,11 +208,15 @@ namespace RLBot.Modules
                 queue.users.Clear();
                 queues.Remove(queue);
 
+                long queueId = await InsertQueueData(team_a, team_b);
+
                 await ReplyAsync("", embed: new EmbedBuilder()
                     .WithColor(RLBot.EMBED_COLOR)
                     .WithTitle("Inhouse 3v3 teams")
                     .AddInlineField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}")
                     .AddInlineField("Team B", $"{team_b[0].Mention}\n{team_b[1].Mention}\n{team_b[2].Mention}")
+                    .AddField("ID", queueId)
+                    .WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult")
                     .Build());
             }
             else
@@ -288,6 +269,171 @@ namespace RLBot.Modules
             }
             else
                 await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
+        }
+
+        [Command("qresult")]
+        [Summary("Submit the score for a queue")]
+        [Remarks("qresult <queue ID> <score team A> <score team B>")]
+        public async Task SetResultAsync(long queueId, byte scoreTeamA, byte scoreTeamB)
+        {
+            if (scoreTeamA < 0 || scoreTeamB < 0 || scoreTeamA == scoreTeamB)
+            {
+                await ReplyAsync("Invalid scores.");
+                return;
+            }
+            
+            using (SqlConnection conn = RLBot.GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                using (SqlTransaction tr = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        bool queueExists = false;
+                        bool scoreAlreadySet = false;
+
+                        // retrieve the queue data if it exists
+                        using (SqlCommand cmd = conn.CreateCommand())
+                        {
+                            cmd.Transaction = tr;
+                            cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
+                            cmd.CommandText = DB_QUEUE_SELECT;
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.HasRows)
+                                {
+                                    await reader.ReadAsync();
+                                    queueExists = true;
+                                    scoreAlreadySet = (byte)reader["ScoreTeamA"] != 0 || (byte)reader["ScoreTeamB"] != 0;
+                                }
+                                reader.Close();
+                            }
+                        }
+
+                        // check if the queue exists
+                        if (!queueExists)
+                        {
+                            await ReplyAsync($"Didn't find queue {queueId}");
+                            return;
+                        }
+
+                        // check if queue score is not yet set
+                        if (scoreAlreadySet)
+                        {
+                            await ReplyAsync($"The score for queue {queueId} has already been submitted");
+                            return;
+                        }
+
+                        // check if author is part of the queue
+                        bool authorInQueue = false;
+                        using (SqlCommand cmd = conn.CreateCommand())
+                        {
+                            cmd.Transaction = tr;
+                            cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
+                            cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)Context.Message.Author.Id;
+                            cmd.CommandText = DB_QUEUEPLAYER_SELECT;
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                authorInQueue = reader.HasRows;
+                                reader.Close();
+                            }
+                        }
+
+                        if (!authorInQueue)
+                        {
+                            await ReplyAsync($"Only players from queue {queueId} can set the score");
+                            return;
+                        }
+
+                        // set the score
+                        using (SqlCommand cmd = conn.CreateCommand())
+                        {
+                            cmd.Transaction = tr;
+                            cmd.Parameters.AddWithValue("@QueueID", DbType.Decimal).Value = (decimal)queueId;
+                            cmd.Parameters.AddWithValue("@ScoreTeamA", DbType.Byte).Value = scoreTeamA;
+                            cmd.Parameters.AddWithValue("@ScoreTeamB", DbType.Byte).Value = scoreTeamB;
+                            cmd.CommandText = DB_QUEUE_UPDATE;
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                        tr.Commit();
+
+                        await ReplyAsync($"The score for queue {queueId} has been succesfully submitted");
+                    }
+                    catch (Exception ex)
+                    {
+                        await ReplyAsync(ex.StackTrace.Substring(0, 1500));
+                        throw ex;
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+                }
+            }
+        }
+
+        private async Task<long> InsertQueueData(List<SocketUser> team_a, List<SocketUser> team_b)
+        {
+            long queueId = -1;
+            using (SqlConnection conn = RLBot.GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                using (SqlTransaction tr = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        using (SqlCommand cmd = conn.CreateCommand())
+                        {
+                            cmd.Transaction = tr;
+                            cmd.CommandText = "INSERT INTO Queue(ScoreTeamA, ScoreTeamB, Created) OUTPUT INSERTED.QueueID VALUES(0, 0, GETDATE());";
+                            var res = await cmd.ExecuteScalarAsync();
+                            queueId = (long)res;
+                        }
+
+                        var tasks = new Task[team_a.Count + team_b.Count];
+                        int i = 0;
+                        foreach(SocketUser user in team_a)
+                        {
+                            tasks[i] = InsertQueuePlayer(conn, tr, queueId, user.Id, 0);
+                            i++;
+                        }
+                        foreach (SocketUser user in team_b)
+                        {
+                            tasks[i] = InsertQueuePlayer(conn, tr, queueId, user.Id, 1);
+                            i++;
+                        }
+
+                        await Task.WhenAll(tasks);
+
+                        tr.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        await ReplyAsync(ex.StackTrace.Substring(0, 1500));
+
+                        tr.Rollback();
+                        throw ex;
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+                }
+            }
+            return queueId;
+        }
+
+        private async Task InsertQueuePlayer(SqlConnection conn, SqlTransaction tr, long queueId, ulong userId, byte team)
+        {
+            using (SqlCommand cmd = conn.CreateCommand())
+            {
+                cmd.Transaction = tr;
+                cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
+                cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)userId;
+                cmd.Parameters.AddWithValue("@Team", DbType.Byte).Value = team;
+                cmd.CommandText = "INSERT INTO QueuePlayer(QueueId, UserID, Team) VALUES(@QueueId, @UserID, @Team);";
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
     }
 }
