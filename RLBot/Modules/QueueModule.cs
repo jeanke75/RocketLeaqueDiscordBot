@@ -361,7 +361,7 @@ namespace RLBot.Modules
                     }
                     catch (Exception ex)
                     {
-                        await ReplyAsync(ex.StackTrace.Substring(0, 1500));
+                        await ReplyAsync(ex.Message);
                         throw ex;
                     }
                     finally
@@ -409,7 +409,7 @@ namespace RLBot.Modules
                     }
                     catch (Exception ex)
                     {
-                        await ReplyAsync(ex.StackTrace.Substring(0, 1500));
+                        await ReplyAsync(ex.Message);
 
                         tr.Rollback();
                         throw ex;

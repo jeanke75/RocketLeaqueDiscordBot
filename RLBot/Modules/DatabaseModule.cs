@@ -95,7 +95,7 @@ namespace RLBot.Modules
         }
 
         [Command("select")]
-        [Summary("Show a list of all the tables in the database")]
+        [Summary("Run a select command against the database")]
         [Remarks("select <rest of the select command>")]
         public async Task SelectAsync([Remainder]string command)
         {
