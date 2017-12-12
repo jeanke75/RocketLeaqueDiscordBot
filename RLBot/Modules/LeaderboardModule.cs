@@ -178,10 +178,10 @@ namespace RLBot.Modules
                 else if (i == 2)
                     icon = ":third_place:";
                 else
-                    icon = "       ";
-
+                    icon = ":eight_pointed_black_star:";
+                
                 float perc = (float)Math.Round(top5[i].Wins * 100.0f / top5[i].TotalGames, 2);
-                s += $"{icon} {"<@" + top5[i].UserID + ">"} - {top5[i].Wins}wins ({perc}%)\n";
+                s += $"{icon} {_client.GetUser(top5[i].UserID)} - {top5[i].Wins}wins ({perc}%)\n";
             }
 
             builder.AddInlineField(title, s);
