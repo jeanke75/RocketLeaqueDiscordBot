@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace RLBot.Services
+namespace RLBot.Handlers
 {
     public class CommandHandler : Handler
     {

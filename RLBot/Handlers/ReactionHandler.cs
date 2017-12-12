@@ -5,7 +5,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace RLBot.Services
+namespace RLBot.Handlers
 {
     public class ReactionHandler : Handler
     {
