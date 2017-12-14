@@ -15,9 +15,9 @@ namespace RLBot.Modules
     public class LeaderboardModule : ModuleBase<SocketCommandContext>
     {
         readonly DiscordSocketClient _client;
-        readonly string DB_QUEUE_SELECT = "SELECT ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR (qp.Team = 1 AND q.ScoreTeamA<q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID WHERE qp.UserID = @UserID";
-        readonly string DB_TOP_5_MONTHLY = "SELECT TOP 5 qp.UserID, ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR (qp.Team = 1 AND q.ScoreTeamA<q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID WHERE q.Created >= CAST(DATEADD(dd, -DAY(GETDATE()) + 1, GETDATE()) AS DATE) AND q.Created < CAST(DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) AS DATE) group by qp.UserID order by 2 desc, 3 asc";
-        readonly string DB_TOP_5_ALL_TIME = "SELECT TOP 5 qp.UserID, ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR(qp.Team = 1 AND q.ScoreTeamA<q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID group by qp.UserID order by 2 desc, 3 asc";
+        readonly string DB_QUEUE_SELECT = "SELECT ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR (qp.Team = 1 AND q.ScoreTeamA<q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID WHERE ((q.ScoreTeamA > 0 OR q.ScoreTeamB > 0) OR (DATEDIFF(hour, q.Created, GetDate()) > 24)) AND qp.UserID = @UserID";
+        readonly string DB_TOP_5_MONTHLY = "SELECT TOP 5 qp.UserID, ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR (qp.Team = 1 AND q.ScoreTeamA < q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID WHERE ((q.ScoreTeamA > 0 OR q.ScoreTeamB > 0) OR (DATEDIFF(hour, q.Created, GetDate()) > 24)) AND q.Created >= CAST(DATEADD(dd, -DAY(GETDATE()) + 1, GETDATE()) AS DATE) AND q.Created < CAST(DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) AS DATE) GROUP BY qp.UserID ORDER BY 2 DESC, 3 ASC";
+        readonly string DB_TOP_5_ALL_TIME = "SELECT TOP 5 qp.UserID, ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR (qp.Team = 1 AND q.ScoreTeamA < q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID WHERE ((q.ScoreTeamA > 0 OR q.ScoreTeamB > 0) OR (DATEDIFF(hour, q.Created, GetDate()) > 24)) GROUP BY qp.UserID ORDER BY 2 DESC, 3 ASC";
 
         public LeaderboardModule(DiscordSocketClient client)
         {
@@ -181,7 +181,11 @@ namespace RLBot.Modules
                     icon = ":eight_pointed_black_star:";
                 
                 float perc = (float)Math.Round(top5[i].Wins * 100.0f / top5[i].TotalGames, 2);
-                s += $"{icon} {_client.GetUser(top5[i].UserID)} - {top5[i].Wins}wins ({perc}%)\n";
+
+                // in case the user isn't in any of the servers the bot is in anymore show the user id
+                var user = _client.GetUser(top5[i].UserID);
+                string username = (user != null ? user.ToString() : $"<{top5[i].UserID}>");
+                s += $"{icon} {username} - {top5[i].Wins}wins ({perc}%)\n";
             }
 
             builder.AddInlineField(title, s);
