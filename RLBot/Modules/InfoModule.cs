@@ -40,6 +40,7 @@ namespace RLBot.Modules
         [Command("botinfo")]
         [Summary("General info about the bot")]
         [Remarks("botinfo")]
+        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task InfoAsync()
         {
             var application = await _client.GetApplicationInfoAsync();
@@ -87,7 +88,7 @@ namespace RLBot.Modules
         [Remarks("userinfo (<user>)")]
         public async Task UserInfoAsync([Summary("The (optional) user to get info for")] SocketUser user = null)
         {
-            var userInfo = user ?? Context.Client.CurrentUser;
+            var userInfo = user ?? Context.Message.Author;
             await ReplyAsync(userInfo.ToString());
         }
     }
