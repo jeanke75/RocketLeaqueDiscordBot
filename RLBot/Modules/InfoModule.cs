@@ -40,7 +40,6 @@ namespace RLBot.Modules
         [Command("botinfo")]
         [Summary("General info about the bot")]
         [Remarks("botinfo")]
-        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task InfoAsync()
         {
             var application = await _client.GetApplicationInfoAsync();

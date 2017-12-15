@@ -17,7 +17,6 @@ namespace RLBot.Modules
     {
         static List<RLQueue> queues = new List<RLQueue>();
         static Random rnd = new Random();
-        readonly string DM = "The queue cannot be used in a DM.";
         readonly string NOT_OPEN = "There is no open queue atm. Type \"" + RLBot.COMMAND_PREFIX + "qopen\", to start a new one.";
         readonly string NOT_ENOUGH_PLAYERS = "Not enough players have joined the queue yet! {0}/6";
 
@@ -29,14 +28,9 @@ namespace RLBot.Modules
         [Alias("qo")]
         [Summary("Create a new queue from which two 3man teams will be picked")]
         [Remarks("qopen")]
+        [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task OpenQueueAsync()
         {
-            if (!(Context.Channel is SocketGuildChannel))
-            {
-                await ReplyAsync(DM);
-                return;
-            }
-
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
@@ -55,14 +49,9 @@ namespace RLBot.Modules
         [Alias("qj")]
         [Summary("Join the queue for 6man games")]
         [Remarks("qjoin")]
+        [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task JoinQueueAsync()
         {
-            if (!(Context.Channel is SocketGuildChannel))
-            {
-                await ReplyAsync(DM);
-                return;
-            }
-
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
@@ -88,14 +77,9 @@ namespace RLBot.Modules
         [Alias("ql")]
         [Summary("Leave the queue for 6man games")]
         [Remarks("qleave")]
+        [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task LeaveQueueAsync()
         {
-            if (!(Context.Channel is SocketGuildChannel))
-            {
-                await ReplyAsync(DM);
-                return;
-            }
-
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
                 await ReplyAsync("There is no active queue.");
@@ -119,12 +103,6 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task ListOfPlayersInQueueAsync()
         {
-            if (!(Context.Channel is SocketGuildChannel))
-            {
-                await ReplyAsync(DM);
-                return;
-            }
-
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
@@ -150,14 +128,9 @@ namespace RLBot.Modules
         [Alias("qr")]
         [Summary("Removes the current queue")]
         [Remarks("qreset")]
+        [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task ResetQueueAsync()
         {
-            if (!(Context.Channel is SocketGuildChannel))
-            {
-                await ReplyAsync(DM);
-                return;
-            }
-
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
@@ -177,12 +150,6 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.ManageChannels | GuildPermission.MoveMembers | GuildPermission.EmbedLinks)]
         public async Task PickTeamsFromQueueAsync()
         {
-            if (!(Context.Channel is SocketGuildChannel))
-            {
-                await ReplyAsync(DM);
-                return;
-            }
-
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
@@ -239,12 +206,6 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task PickCaptainsFromQueueAsync()
         {
-            if (!(Context.Channel is SocketGuildChannel))
-            {
-                await ReplyAsync(DM);
-                return;
-            }
-
             var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
@@ -284,6 +245,7 @@ namespace RLBot.Modules
         [Command("qresult")]
         [Summary("Submit the score for a queue")]
         [Remarks("qresult <queue ID> <score team A> <score team B>")]
+        [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task SetResultAsync(long queueId, byte scoreTeamA, byte scoreTeamB)
         {
             if (scoreTeamA < 0 || scoreTeamB < 0 || scoreTeamA == scoreTeamB)

@@ -27,7 +27,6 @@ namespace RLBot.Modules
         [Command("stats")]
         [Summary("Returns leaderboard info about the current user, or the user parameter, if one passed.")]
         [Remarks("stats")]
-        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task StatsAsync(IUser user = null)
         {
             var userInfo = user ?? Context.Message.Author;
@@ -76,7 +75,6 @@ namespace RLBot.Modules
         [Command("top5")]
         [Summary("Returns the 5 players with the most wins for both Monthly and All-Time.")]
         [Remarks("top5")]
-        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task Top5Async()
         {
             LeaderboardRecord[] monthlyTop5 = null;

@@ -22,7 +22,6 @@ namespace RLBot.Modules
         [Name("help")]
         [Command]
         [Summary("List all the modules in the bot")]
-        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task HelpAsync()
         {
             string mList = "";
@@ -49,7 +48,6 @@ namespace RLBot.Modules
         [Command("module")]
         [Summary("List all the commands in a module")]
         [Remarks("help module <module name>")]
-        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task HelpModuleAsync(string moduleName)
         {
             string cList = "";
@@ -93,7 +91,6 @@ namespace RLBot.Modules
         [Command("command")]
         [Summary("List a command's details")]
         [Remarks("help command <command name>")]
-        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task HelpCommandAsync(string c)
         {
             var result = commands.Search(Context, c);
