@@ -39,6 +39,8 @@ namespace RLBot.Modules
                 .WithDescription(suggestion.Trim())
                 .WithCurrentTimestamp()
                 .Build());
+
+            await ReplyAsync("Succesfully submitted the suggestion.");
         }
 
         [Command("bugreport")]
@@ -63,6 +65,8 @@ namespace RLBot.Modules
                 .WithDescription(bug.Trim())
                 .WithCurrentTimestamp()
                 .Build());
+
+            await ReplyAsync("Succesfully submitted the bugreport.");
         }
     }
 }
