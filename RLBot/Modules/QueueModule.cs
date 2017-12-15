@@ -213,7 +213,7 @@ namespace RLBot.Modules
                 long queueId = await InsertQueueData(team_a, team_b);
 
                 // send message to channel
-                await ReplyAsync("", embed: new EmbedBuilder()
+                var msg = ReplyAsync("", embed: new EmbedBuilder()
                     .WithColor(RLBot.EMBED_COLOR)
                     .WithTitle("Inhouse 3v3 teams")
                     .AddField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}", true)
@@ -221,6 +221,12 @@ namespace RLBot.Modules
                     .AddField("ID", queueId)
                     .WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult")
                     .Build());
+                
+                // create voice channels, set player permissions and move the players into the channels
+                var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
+                var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
+
+                await Task.WhenAll(msg, teamA, teamB);
             }
             else
                 await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
@@ -361,6 +367,14 @@ namespace RLBot.Modules
                         }
                         tr.Commit();
 
+                        var channels = Context.Guild.VoiceChannels.Where(x => x.Name.Contains($"#{queueId}")).ToArray();
+                        var tasks = new Task[channels.Count()];
+                        for (int i = 0; i < channels.Length; i++)
+                        {
+                            tasks[i] = channels[i].DeleteAsync();
+                        }
+                        await Task.WhenAll(tasks);
+
                         await ReplyAsync($"The score for queue {queueId} has been submitted");
                     }
                     catch (Exception ex)
@@ -438,6 +452,49 @@ namespace RLBot.Modules
                 cmd.CommandText = "INSERT INTO QueuePlayer(QueueId, UserID, Team) VALUES(@QueueId, @UserID, @Team);";
                 await cmd.ExecuteNonQueryAsync();
             }
+        }
+
+        private async Task CreateTeamVoiceChannelAsync(long queueId, string roomName, List<SocketUser> team)
+        {
+            // create voice channel
+            var voiceChannel = await Context.Guild.CreateVoiceChannelAsync($"{roomName} #{queueId}");
+            (voiceChannel as IVoiceChannel)?.ModifyAsync(x =>
+            {
+                x.UserLimit = team.Count;
+            });
+
+            // set the bot's permissions
+            OverwritePermissions botPerms = new OverwritePermissions(PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow);
+            await voiceChannel.AddPermissionOverwriteAsync(Context.Client.CurrentUser, botPerms);
+
+            // set the team's players permissions and move player
+            OverwritePermissions teamPerms = new OverwritePermissions(PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny);
+            Task[] tasks = new Task[team.Count];
+            int i = 0;
+            foreach (SocketUser user in team)
+            {
+                var gu = Context.Guild.GetUser(user.Id);
+                tasks[i] = voiceChannel.AddPermissionOverwriteAsync(user as SocketGuildUser, teamPerms);
+                i++;
+            }
+
+            await Task.WhenAll(tasks);
+
+            // remove all permissions for everyone else
+            OverwritePermissions everyonePerms = new OverwritePermissions(PermValue.Deny, PermValue.Inherit, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny);
+            await voiceChannel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole, everyonePerms);
+
+            // move the team into the voice channel
+            tasks = new Task[team.Count];
+            i = 0;
+            foreach (SocketUser user in team)
+            {
+                var gu = Context.Guild.GetUser(user.Id);
+                tasks[i] = (gu).ModifyAsync(x => x.Channel = voiceChannel);
+                i++;
+            }
+
+            await Task.WhenAll(tasks);
         }
     }
 }
