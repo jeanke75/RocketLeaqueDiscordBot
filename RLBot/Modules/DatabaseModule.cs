@@ -9,16 +9,14 @@ namespace RLBot.Modules
 {
     [Name("Database")]
     [Hidden()]
+    [RequireOwner]
     public class DatabaseModule : ModuleBase<SocketCommandContext>
     {
         [Command("sql")]
         [Summary("Run an sql command against the database that does not return a result. (insert, update, delete)")]
         [Remarks("sql <sql command>")]
-        [RequireOwner]
         public async Task RunSQLCommand([Remainder]string command)
         {
-            if (Context.Message.Author.Id != RLBot.APPLICATION_OWNER_ID) return;
-
             command = command.Trim();
             if (command.Equals(""))
             {
@@ -54,11 +52,8 @@ namespace RLBot.Modules
         [Command("tables")]
         [Summary("Show a list of all the tables in the database")]
         [Remarks("tables")]
-        [RequireOwner]
         public async Task TablesAsync()
         {
-            if (Context.Message.Author.Id != RLBot.APPLICATION_OWNER_ID) return;
-
             try
             {
                 using (SqlConnection conn = RLBot.GetSqlConnection())
@@ -99,11 +94,9 @@ namespace RLBot.Modules
         [Command("select")]
         [Summary("Run a select command against the database")]
         [Remarks("select <rest of the select command>")]
-        [RequireOwner]
         public async Task SelectAsync([Remainder]string command)
         {
             command = command.Trim();
-            if (Context.Message.Author.Id != RLBot.APPLICATION_OWNER_ID || command == "") return;
             try
             {
                 using (SqlConnection conn = RLBot.GetSqlConnection())
