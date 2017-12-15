@@ -27,12 +27,13 @@ namespace RLBot.Modules
         [Command("stats")]
         [Summary("Returns leaderboard info about the current user, or the user parameter, if one passed.")]
         [Remarks("stats")]
+        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task StatsAsync(IUser user = null)
         {
             var userInfo = user ?? Context.Message.Author;
 
             LeaderboardRecord recordTotal = null;
-            LeaderboardRecord recordMonthly = null;
+            LeaderboardRecord recordMonthly = null;   
             using (SqlConnection conn = RLBot.GetSqlConnection())
             {
                 await conn.OpenAsync();
@@ -62,8 +63,8 @@ namespace RLBot.Modules
                 await ReplyAsync("", embed: new EmbedBuilder()
                                                 .WithColor(RLBot.EMBED_COLOR)
                                                 .WithTitle($":trophy: Leaderboard info - {userInfo} :trophy:")
-                                                .AddInlineField("Monthly", $"Wins: {recordMonthly.Wins}\nGames Played: {recordMonthly.TotalGames}")
-                                                .AddInlineField("All-Time", $"Wins: {recordTotal.Wins}\nGames Played: {recordTotal.TotalGames}")
+                                                .AddField("Monthly", $"Wins: {recordMonthly.Wins}\nGames Played: {recordMonthly.TotalGames}", true)
+                                                .AddField("All-Time", $"Wins: {recordTotal.Wins}\nGames Played: {recordTotal.TotalGames}", true)
                                                 .Build());
             else
             {
@@ -75,6 +76,7 @@ namespace RLBot.Modules
         [Command("top5")]
         [Summary("Returns the 5 players with the most wins for both Monthly and All-Time.")]
         [Remarks("top5")]
+        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task Top5Async()
         {
             LeaderboardRecord[] monthlyTop5 = null;
@@ -188,7 +190,7 @@ namespace RLBot.Modules
                 s += $"{icon} {username} - {top5[i].Wins}wins ({perc}%)\n";
             }
 
-            builder.AddInlineField(title, s);
+            builder.AddField(title, s, true);
         }
     }
 }

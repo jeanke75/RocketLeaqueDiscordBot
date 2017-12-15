@@ -116,6 +116,7 @@ namespace RLBot.Modules
         [Alias("qs")]
         [Summary("Show a list of all the people in the queue")]
         [Remarks("qstatus")]
+        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task ListOfPlayersInQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -173,6 +174,7 @@ namespace RLBot.Modules
         [Alias("qp")]
         [Summary("Randomly divide the 6 players into 2 even teams")]
         [Remarks("qpick")]
+        [RequireBotPermission(GuildPermission.ManageChannels | GuildPermission.MoveMembers | GuildPermission.EmbedLinks)]
         public async Task PickTeamsFromQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -210,11 +212,12 @@ namespace RLBot.Modules
 
                 long queueId = await InsertQueueData(team_a, team_b);
 
+                // send message to channel
                 await ReplyAsync("", embed: new EmbedBuilder()
                     .WithColor(RLBot.EMBED_COLOR)
                     .WithTitle("Inhouse 3v3 teams")
-                    .AddInlineField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}")
-                    .AddInlineField("Team B", $"{team_b[0].Mention}\n{team_b[1].Mention}\n{team_b[2].Mention}")
+                    .AddField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}", true)
+                    .AddField("Team B", $"{team_b[0].Mention}\n{team_b[1].Mention}\n{team_b[2].Mention}", true)
                     .AddField("ID", queueId)
                     .WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult")
                     .Build());
@@ -227,6 +230,7 @@ namespace RLBot.Modules
         [Alias("qc")]
         [Summary("Randomly select 2 captains from the queue")]
         [Remarks("qcaptain")]
+        [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task PickCaptainsFromQueueAsync()
         {
             if (!(Context.Channel is SocketGuildChannel))
@@ -259,8 +263,8 @@ namespace RLBot.Modules
                 await ReplyAsync("", embed: new EmbedBuilder()
                     .WithColor(RLBot.EMBED_COLOR)
                     .WithTitle("Inhouse captains")
-                    .AddInlineField("Captain A", captains[0].Mention)
-                    .AddInlineField("Captain B", captains[1].Mention)
+                    .AddField("Captain A", captains[0].Mention, true)
+                    .AddField("Captain B", captains[1].Mention, true)
                     .AddField("Remaining", string.Join(", ", queue.users.Select(x => x.Mention)))
                     .Build());
 
@@ -281,7 +285,7 @@ namespace RLBot.Modules
                 await ReplyAsync("Invalid scores.");
                 return;
             }
-            
+
             using (SqlConnection conn = RLBot.GetSqlConnection())
             {
                 await conn.OpenAsync();
@@ -357,7 +361,7 @@ namespace RLBot.Modules
                         }
                         tr.Commit();
 
-                        await ReplyAsync($"The score for queue {queueId} has been succesfully submitted");
+                        await ReplyAsync($"The score for queue {queueId} has been submitted");
                     }
                     catch (Exception ex)
                     {

@@ -60,7 +60,7 @@ namespace RLBot.Preconditions
             }
         }
 
-        public override async Task<PreconditionResult> CheckPermissions(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
             if (CoolingDown.ContainsKey(context.User.Id))
             {
@@ -84,7 +84,7 @@ namespace RLBot.Preconditions
                         if (hours > 0) time = time + $"{hours / 3600}hours ";
                         if (minutes > 0) time = time + $"{minutes / 60}minutes ";
                         if (seconds > 0) time = time + $"{seconds}seconds ";
-                        
+
                         return PreconditionResult.FromError($"{name}, `{time}`before you can use this command again.");
                     }
                 }

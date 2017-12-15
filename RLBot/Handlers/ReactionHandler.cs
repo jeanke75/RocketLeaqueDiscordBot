@@ -108,9 +108,13 @@ namespace RLBot.Handlers
 
         private async Task HandlePlatformReactionAsync(IUserMessage platformMsg, SocketGuild guild, SocketGuildUser user, SocketReaction reaction)
         {
-            var steamTask = platformMsg.GetReactionUsersAsync("STEAM:385533217547223042", 1, user.Id);
-            var xboxTask = platformMsg.GetReactionUsersAsync("XBOX:385533231824371713", 1, user.Id);
-            var ps4Task = platformMsg.GetReactionUsersAsync("PS4:385533264133095435", 1, user.Id);
+            Emoji steamEmote = new Emoji("STEAM:385533217547223042");
+            Emoji xboxEmote = new Emoji("XBOX:385533231824371713");
+            Emoji ps4Emote = new Emoji("PS4:385533264133095435");
+
+            var steamTask = platformMsg.GetReactionUsersAsync(steamEmote, 1, user.Id);
+            var xboxTask = platformMsg.GetReactionUsersAsync(xboxEmote, 1, user.Id);
+            var ps4Task = platformMsg.GetReactionUsersAsync(ps4Emote, 1, user.Id);
             await Task.WhenAll(steamTask, xboxTask, ps4Task);
 
             bool steam = (await steamTask).Where(x => x.Id == user.Id).FirstOrDefault() != null;
@@ -119,11 +123,11 @@ namespace RLBot.Handlers
 
             // remove other platforms
             if ((reaction.Emote.Name == "STEAM" || reaction.Emote.Name == "PS4") && xbox)
-                await platformMsg.RemoveReactionAsync(new Emoji("XBOX:385533231824371713"), user);
+                await platformMsg.RemoveReactionAsync(xboxEmote, user);
             if ((reaction.Emote.Name == "STEAM" || reaction.Emote.Name == "XBOX") && ps4)
-                await platformMsg.RemoveReactionAsync(new Emoji("PS4:385533264133095435"), user);
+                await platformMsg.RemoveReactionAsync(ps4Emote, user);
             if ((reaction.Emote.Name == "XBOX" || reaction.Emote.Name == "PS4") && steam)
-                await platformMsg.RemoveReactionAsync(new Emoji("STEAM:385533217547223042"), user);
+                await platformMsg.RemoveReactionAsync(steamEmote, user);
             
             // manage roles
             var steamRoleTask = ManageRole(guild, 386067580630073356, user, reaction.Emote.Name == "STEAM");
@@ -151,25 +155,25 @@ namespace RLBot.Handlers
 
         private async Task HandleRankReactionAsync(IUserMessage rankMsg, SocketGuild guild, SocketGuildUser user)
         {
-            var gcTask = rankMsg.GetReactionUsersAsync("GRANDCHAMPION:385533112039243777", 1, user.Id);
-            var c3Task = rankMsg.GetReactionUsersAsync("CHAMPIONIII:385533131253481473", 1, user.Id);
-            var c2Task = rankMsg.GetReactionUsersAsync("CHAMPIONII:385533146101186561", 1, user.Id);
-            var c1Task = rankMsg.GetReactionUsersAsync("CHAMPIONI:385533163730108428", 1, user.Id);
-            var d3Task = rankMsg.GetReactionUsersAsync("DIAMONDIII:385533012747747331", 1, user.Id);
-            var d2Task = rankMsg.GetReactionUsersAsync("DIAMONDII:385533027121496064", 1, user.Id);
-            var d1Task = rankMsg.GetReactionUsersAsync("DIAMONDI:385533052820127744", 1, user.Id);
-            var p3Task = rankMsg.GetReactionUsersAsync("PLATINUMIII:385532956921298956", 1, user.Id);
-            var p2Task = rankMsg.GetReactionUsersAsync("PLATINUMII:385532977775378432", 1, user.Id);
-            var p1Task = rankMsg.GetReactionUsersAsync("PLATINUMI:385532994175238144", 1, user.Id);
-            /*var g3Task = rankMsg.GetReactionUsersAsync("GOLDIII:385532111966306316", 1, user.Id);
-            var g2Task = rankMsg.GetReactionUsersAsync("GOLDII:385532145814208512", 1, user.Id);
-            var g1Task = rankMsg.GetReactionUsersAsync("GOLDI:385532172917932033", 1, user.Id);
-            var s3Task = rankMsg.GetReactionUsersAsync("SILVERIII:385531240985395212", 1, user.Id);
-            var s2Task = rankMsg.GetReactionUsersAsync("SILVERII:385531259419492357", 1, user.Id);
-            var s1Task = rankMsg.GetReactionUsersAsync("SILVERI:385531276574326785", 1, user.Id);
-            var b3Task = rankMsg.GetReactionUsersAsync("BRONZEIII:385531174199492608", 1, user.Id);
-            var b2Task = rankMsg.GetReactionUsersAsync("BRONZEII:385531191844929540", 1, user.Id);
-            var b1Task = rankMsg.GetReactionUsersAsync("BRONZEI:385531207179567125", 1, user.Id);*/
+            var gcTask = rankMsg.GetReactionUsersAsync(new Emoji("GRANDCHAMPION:385533112039243777"), 1, user.Id);
+            var c3Task = rankMsg.GetReactionUsersAsync(new Emoji("CHAMPIONIII:385533131253481473"), 1, user.Id);
+            var c2Task = rankMsg.GetReactionUsersAsync(new Emoji("CHAMPIONII:385533146101186561"), 1, user.Id);
+            var c1Task = rankMsg.GetReactionUsersAsync(new Emoji("CHAMPIONI:385533163730108428"), 1, user.Id);
+            var d3Task = rankMsg.GetReactionUsersAsync(new Emoji("DIAMONDIII:385533012747747331"), 1, user.Id);
+            var d2Task = rankMsg.GetReactionUsersAsync(new Emoji("DIAMONDII:385533027121496064"), 1, user.Id);
+            var d1Task = rankMsg.GetReactionUsersAsync(new Emoji("DIAMONDI:385533052820127744"), 1, user.Id);
+            var p3Task = rankMsg.GetReactionUsersAsync(new Emoji("PLATINUMIII:385532956921298956"), 1, user.Id);
+            var p2Task = rankMsg.GetReactionUsersAsync(new Emoji("PLATINUMII:385532977775378432"), 1, user.Id);
+            var p1Task = rankMsg.GetReactionUsersAsync(new Emoji("PLATINUMI:385532994175238144"), 1, user.Id);
+            /*var g3Task = rankMsg.GetReactionUsersAsync(Emote.Parse("GOLDIII:385532111966306316"), 1, user.Id);
+            var g2Task = rankMsg.GetReactionUsersAsync(Emote.Parse("GOLDII:385532145814208512"), 1, user.Id);
+            var g1Task = rankMsg.GetReactionUsersAsync(Emote.Parse("GOLDI:385532172917932033"), 1, user.Id);
+            var s3Task = rankMsg.GetReactionUsersAsync(Emote.Parse("SILVERIII:385531240985395212"), 1, user.Id);
+            var s2Task = rankMsg.GetReactionUsersAsync(Emote.Parse("SILVERII:385531259419492357"), 1, user.Id);
+            var s1Task = rankMsg.GetReactionUsersAsync(Emote.Parse("SILVERI:385531276574326785"), 1, user.Id);
+            var b3Task = rankMsg.GetReactionUsersAsync(Emote.Parse("BRONZEIII:385531174199492608"), 1, user.Id);
+            var b2Task = rankMsg.GetReactionUsersAsync(Emote.Parse("BRONZEII:385531191844929540"), 1, user.Id);
+            var b1Task = rankMsg.GetReactionUsersAsync(Emote.Parse("BRONZEI:385531207179567125"), 1, user.Id);*/
             await Task.WhenAll(gcTask, c3Task, c2Task, c1Task, d3Task, d2Task, d1Task, p3Task, p2Task, p1Task);//, g3Task, g2Task, g1Task, s3Task, s2Task, s1Task, b3Task, b2Task, b1Task);
 
             bool gc = (await gcTask).Where(x => x.Id == user.Id).FirstOrDefault() != null;
