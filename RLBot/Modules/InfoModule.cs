@@ -15,34 +15,33 @@ namespace RLBot.Modules
     [Summary("General information")]
     public class InfoModule : ModuleBase<SocketCommandContext>
     {
-        private readonly DiscordSocketClient _client;
-
-        public InfoModule(DiscordSocketClient client)
-        {
-            _client = client;
-        }
-
         [Command("invite")]
         [Summary("Returns the OAuth2 Invite URL of the bot")]
         [Remarks("invite")]
         public async Task Invite()
         {
             var application = await Context.Client.GetApplicationInfoAsync();
-            await ReplyAsync($"A user with `MANAGE_SERVER` can invite me to your server here: <https://discordapp.com/oauth2/authorize?client_id={application.Id}&scope=bot>");
+
+            var generalPermissions = GuildPermission.ManageRoles | GuildPermission.ManageChannels | GuildPermission.CreateInstantInvite | GuildPermission.ChangeNickname | GuildPermission.ReadMessages;
+            var textPermissions = GuildPermission.SendMessages | GuildPermission.EmbedLinks | GuildPermission.AttachFiles | GuildPermission.ReadMessageHistory | GuildPermission.MentionEveryone | GuildPermission.UseExternalEmojis | GuildPermission.AddReactions;
+            var voicePermissions = GuildPermission.MoveMembers;
+            var requiredPermissions = (int)(generalPermissions | textPermissions | voicePermissions);
+
+            await ReplyAsync($"A user with `MANAGE_SERVER` can invite me to your server here: <https://discordapp.com/oauth2/authorize?client_id={application.Id}&scope=bot&permissions={requiredPermissions}>");
         }
 
         [Command("ping")]
         [Summary("Ping to see the latency")]
         [Remarks("ping")]
         public async Task PingAsync()
-            => await ReplyAsync($"Pong! - {_client.Latency}ms");
+            => await ReplyAsync($"Pong! - {Context.Client.Latency}ms");
 
         [Command("botinfo")]
         [Summary("General info about the bot")]
         [Remarks("botinfo")]
         public async Task InfoAsync()
         {
-            var application = await _client.GetApplicationInfoAsync();
+            var application = await Context.Client.GetApplicationInfoAsync();
             string latestChanges = null;
             
             var _http = new HttpClient();
@@ -70,9 +69,9 @@ namespace RLBot.Modules
                 .AddField("Info",
                     $"**Author:** `{application.Owner}` [ID: {application.Owner.Id}]\n" +
                     $"**Library:** Discord.Net - Version: {DiscordConfig.Version}\n" +
-                    $"**Total Guilds:** {_client.Guilds.Count()}\n" +
-                    $"**Total Channels:** {_client.Guilds.Sum(g => g.Channels.Count())}\n" +
-                    $"**Total Users:** {_client.Guilds.Sum(g => g.Users.Where(b => !b.IsBot).Count())}")
+                    $"**Total Guilds:** {Context.Client.Guilds.Count()}\n" +
+                    $"**Total Channels:** {Context.Client.Guilds.Sum(g => g.Channels.Count())}\n" +
+                    $"**Total Users:** {Context.Client.Guilds.Sum(g => g.Users.Where(b => !b.IsBot).Count())}")
                 .AddField("Process Info",
                     $"**Runtime:** {RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}\n" +
                     $"**Heap Size:** {Math.Round(GC.GetTotalMemory(true) / (1024.0 * 1024.0), 2).ToString()}MB\n" +
