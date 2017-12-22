@@ -20,7 +20,7 @@ namespace RLBot.Modules
 
         [Command("stats")]
         [Summary("Returns leaderboard info about the current user, or the user parameter, if one passed.")]
-        [Remarks("stats")]
+        [Remarks("stats <playlist> <optional user>")]
         public async Task StatsAsync([OverrideTypeReader(typeof(RLPlaylistTypeReader))] RLPlaylist playlist, IUser user = null)
         {
             var userInfo = user ?? Context.Message.Author;
@@ -69,7 +69,7 @@ namespace RLBot.Modules
 
         [Command("top5")]
         [Summary("Returns the 5 players with the most wins for both Monthly and All-Time.")]
-        [Remarks("top5")]
+        [Remarks("top5 <playlist>")]
         public async Task Top5Async([OverrideTypeReader(typeof(RLPlaylistTypeReader))] RLPlaylist playlist)
         {
             LeaderboardRecord[] monthlyTop5 = null;
@@ -161,11 +161,11 @@ namespace RLBot.Modules
 
         private void EmbedWithTop5(EmbedBuilder builder, string title, LeaderboardRecord[] top5)
         {
-            if (top5 == null) return;
-            if (top5.Length != 5) return;
-            
+            if (top5 == null || top5.Length == 0) return;
+
+            int records = top5.Length <= 5 ? top5.Length : 5;
             string s = "";
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < records; i++)
             {
                 string icon = "";
                 if (i == 0)
