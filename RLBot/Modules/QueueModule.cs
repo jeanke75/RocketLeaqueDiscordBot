@@ -15,14 +15,14 @@ namespace RLBot.Modules
     [Summary("Creation and utilization of a queue")]
     public class QueueModule : ModuleBase<SocketCommandContext>
     {
-        static List<RLQueue> queues = new List<RLQueue>();
-        static Random rnd = new Random();
-        readonly string NOT_OPEN = "There is no open queue atm. Type \"" + RLBot.COMMAND_PREFIX + "qopen\", to start a new one.";
-        readonly string NOT_ENOUGH_PLAYERS = "Not enough players have joined the queue yet! {0}/6";
+        private static List<RLQueue> queues = new List<RLQueue>();
+        private static Random rnd = new Random();
+        private readonly string NOT_OPEN = "There is no open queue atm. Type \"" + RLBot.COMMAND_PREFIX + "qopen\", to start a new one.";
+        private readonly string NOT_ENOUGH_PLAYERS = "Not enough players have joined the queue yet! {0}/{1}";
 
-        readonly string DB_QUEUE_SELECT = "SELECT * FROM Queue WHERE QueueID = @QueueID;";
-        readonly string DB_QUEUEPLAYER_SELECT = "SELECT * FROM QueuePlayer WHERE QueueID = @QueueID AND UserID = @UserID;";
-        readonly string DB_QUEUE_UPDATE = "UPDATE Queue SET ScoreTeamA = @ScoreTeamA, ScoreTeamB = @ScoreTeamB WHERE QueueID = @QueueID;";
+        private readonly string DB_QUEUE_SELECT = "SELECT * FROM Queue WHERE QueueID = @QueueID;";
+        private readonly string DB_QUEUEPLAYER_SELECT = "SELECT * FROM QueuePlayer WHERE QueueID = @QueueID AND UserID = @UserID;";
+        private readonly string DB_QUEUE_UPDATE = "UPDATE Queue SET ScoreTeamA = @ScoreTeamA, ScoreTeamB = @ScoreTeamB WHERE QueueID = @QueueID;";
         
         [Command("qopen")]
         [Alias("qo")]
@@ -31,12 +31,56 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task OpenQueueAsync()
         {
-            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            var queue = queues.Where(x => x.Channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
-                queue = new RLQueue();
-                queue.created = DateTime.Now;
-                queue.channel = Context.Channel as SocketGuildChannel;
+                var channel = Context.Channel as SocketGuildChannel;
+                switch (Context.Guild.Id)
+                {
+                    case 384640081660739594: // test server
+                        switch (channel.Id)
+                        {
+                            case 393411399654703115: // 1v1
+                                queue = RLQueue.DuelQueue(channel, false);
+                                break;
+                            case 393411426451980289: // 2v2
+                                queue = RLQueue.DoublesQueue(channel, false);
+                                break;
+                            case 384666738056232970: // 3v3
+                                queue = RLQueue.StandardQueue(channel, false);
+                                break;
+                        }
+                        break;
+                    case 373829959187169280: // live server
+                        switch (channel.Id)
+                        {
+                            case 393692333469597696: // 1v1 Rank-A
+                            case 393693176772296704: // Rank-Z
+                            case 393693726565728257: // Rank-Y
+                            case 393693993050832896: // Rank-X
+                            case 393694545688133634: // Rank-W
+                                queue = RLQueue.DuelQueue(channel, true);
+                                break;
+                            case 393695480946622465: // 2v2 Rank-A
+                            case 393695741941514240: // Rank-Z
+                            case 393695923026526208: // Rank-Y
+                            case 393696051607109632: // Rank-X
+                            case 393696168300773386: // Rank-W
+                                queue = RLQueue.DoublesQueue(channel, true);
+                                break;
+                            case 386213046672162838: // 3v3 Rank-A
+                            case 375039923603898369: // Rank-Z
+                            case 385070323449462785: // Rank-Y
+                            case 385420072996438021: // Rank-X
+                            case 385393503833948160: // Rank-W
+                                queue = RLQueue.StandardQueue(channel, true);
+                                break;
+                        }
+                        break;
+                    default:
+                        await ReplyAsync("Queue's can currently only be used in the Cross-Net server and the test server.");
+                        return;
+                }
                 queues.Add(queue);
 
                 await ReplyAsync("The queue is open. Type \"" + RLBot.COMMAND_PREFIX + "qjoin\", to join it.");
@@ -52,19 +96,19 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task JoinQueueAsync()
         {
-            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            var queue = queues.Where(x => x.Channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
                 return;
             }
 
-            if (queue.users.Count < 6)
+            if (queue.Users.Count < queue.GetSize())
             {
-                if (queue.users.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault() == null)
+                if (queue.Users.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault() == null)
                 {
-                    queue.users.Add(Context.Message.Author);
-                    await ReplyAsync($"{Context.Message.Author.Mention} joined the queue.");
+                    queue.Users.Add(Context.Message.Author);
+                    await ReplyAsync($"{Context.Message.Author.Mention} joined the queue. {queue.Users.Count}/{queue.GetSize()}");
                 }
                 else
                     await ReplyAsync("You've already joined the queue.");
@@ -80,16 +124,16 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task LeaveQueueAsync()
         {
-            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            var queue = queues.Where(x => x.Channel == Context.Channel).FirstOrDefault();
             if (queue == null)
                 await ReplyAsync("There is no active queue.");
             else
             {
-                var user = queue.users.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault();
+                var user = queue.Users.Where(x => x.Id == Context.Message.Author.Id).FirstOrDefault();
                 if (user != null)
                 {
-                    queue.users.Remove(user);
-                    await ReplyAsync($"{Context.Message.Author.Mention} left the queue.");
+                    queue.Users.Remove(user);
+                    await ReplyAsync($"{Context.Message.Author.Mention} left the queue. {queue.Users.Count}/{queue.GetSize()}");
                 }
                 else
                     await ReplyAsync("You're not in the current queue.");
@@ -103,23 +147,23 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task ListOfPlayersInQueueAsync()
         {
-            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            var queue = queues.Where(x => x.Channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
                 return;
             }
 
-            if (queue.users.Count == 0)
+            if (queue.Users.Count == 0)
             {
                 await ReplyAsync("There current queue is empty.");
                 return;
             }
 
-            string users = string.Join(", ", queue.users);
+            string users = string.Join(", ", queue.Users);
             await ReplyAsync("", embed: new EmbedBuilder()
                         .WithColor(RLBot.EMBED_COLOR)
-                        .WithTitle("Current queue")
+                        .WithTitle($"Current {queue.Playlist} queue {queue.Users.Count}/{queue.GetSize()}")
                         .WithDescription(users)
                         .Build());
         }
@@ -131,26 +175,26 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.SendMessages)]
         public async Task ResetQueueAsync()
         {
-            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            var queue = queues.Where(x => x.Channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
                 return;
             }
 
-            queue.users.Clear();
+            queue.Users.Clear();
             queues.Remove(queue);
             await ReplyAsync("The queue has been reset!");
         }
 
         [Command("qpick")]
         [Alias("qp")]
-        [Summary("Randomly divide the 6 players into 2 even teams")]
+        [Summary("Randomly divide the players into 2 even teams")]
         [Remarks("qpick")]
         [RequireBotPermission(GuildPermission.ManageChannels | GuildPermission.MoveMembers | GuildPermission.EmbedLinks)]
         public async Task PickTeamsFromQueueAsync()
         {
-            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            var queue = queues.Where(x => x.Channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
@@ -158,47 +202,59 @@ namespace RLBot.Modules
             }
 
             // remove offline users from the queue
-            queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
+            queue.Users.RemoveAll(x => x.Status == UserStatus.Offline);
 
-            if (queue.users.Count == 6)
+            if (queue.Users.Count == queue.GetSize())
             {
+                string mentions = string.Join(", ", queue.Users.Select(x => x.Mention));
+
                 List<SocketUser> team_a = new List<SocketUser>();
                 List<SocketUser> team_b = new List<SocketUser>();
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < queue.GetSize(); i++)
                 {
-                    int rng = rnd.Next(0, queue.users.Count);
+                    int rng = rnd.Next(0, queue.Users.Count);
                     if (i % 2 == 0)
-                        team_a.Add(queue.users[rng]);
+                        team_a.Add(queue.Users[rng]);
                     else
-                        team_b.Add(queue.users[rng]);
+                        team_b.Add(queue.Users[rng]);
                     
-                    queue.users.Remove(queue.users[rng]);
+                    // remove this user from every queue he might be in
+                    Parallel.ForEach(queues.Where(x => x.Users.Contains(queue.Users[rng])), x => x.Users.Remove(queue.Users[rng]));
                 }
-                queue.users.Clear();
+
                 queues.Remove(queue);
 
-                long queueId = await InsertQueueData(team_a, team_b);
-
-                // send message to channel
-                var msg = ReplyAsync("", embed: new EmbedBuilder()
+                var embedBuilder = new EmbedBuilder()
                     .WithColor(RLBot.EMBED_COLOR)
-                    .WithTitle("Inhouse 3v3 teams")
-                    .AddField("Team A", $"{team_a[0].Mention}\n{team_a[1].Mention}\n{team_a[2].Mention}", true)
-                    .AddField("Team B", $"{team_b[0].Mention}\n{team_b[1].Mention}\n{team_b[2].Mention}", true)
-                    .AddField("ID", queueId)
-                    .WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult")
-                    .Build());
+                    .WithTitle($"{queue.Playlist} teams")
+                    .AddField("Team A", $"{string.Join("\n", team_a)}", true)
+                    .AddField("Team B", $"{string.Join("\n", team_b)}", true);
                 
-                // create voice channels, set player permissions and move the players into the channels
-                var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
-                var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
+                if (queue.IsLeaderboardQueue)
+                {
+                    long queueId = await InsertQueueData(queue.Playlist, team_a, team_b);
 
-                await Task.WhenAll(msg, teamA, teamB);
+                    embedBuilder.AddField("ID", queueId);
+                    embedBuilder.WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult {queueId} <score A> <score B>");
+
+                    var msg = ReplyAsync(mentions, false, embedBuilder.Build());
+
+                    // create voice channels, set player permissions and move the players into the channels
+                    var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
+                    var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
+
+                    await Task.WhenAll(msg, teamA, teamB);
+                }
+                else
+                {
+                    await ReplyAsync(mentions, false, embedBuilder.Build());
+                }
             }
             else
-                await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
+                await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
         }
 
+        /*
         [Command("qcaptain")]
         [Alias("qc")]
         [Summary("Randomly select 2 captains from the queue")]
@@ -206,41 +262,54 @@ namespace RLBot.Modules
         [RequireBotPermission(GuildPermission.EmbedLinks)]
         public async Task PickCaptainsFromQueueAsync()
         {
-            var queue = queues.Where(x => x.channel == Context.Channel).FirstOrDefault();
+            var queue = queues.Where(x => x.Channel == Context.Channel).FirstOrDefault();
             if (queue == null)
             {
                 await ReplyAsync(NOT_OPEN);
                 return;
             }
 
-            // remove offline users from the queue
-            queue.users.RemoveAll(x => x.Status == UserStatus.Offline);
-
-            if (queue.users.Count == 6)
+            if (queue.GetSize() == 2)
             {
+                await ReplyAsync($"A {queue.Playlist} queue doesn't allow this function.");
+                return;
+            }
+
+            // remove offline users from the queue
+            queue.Users.RemoveAll(x => x.Status == UserStatus.Offline);
+
+            if (queue.Users.Count == queue.GetSize())
+            {
+                string mentions = string.Join(", ", queue.Users.Select(x => x.Mention));
+
                 List<SocketUser> captains = new List<SocketUser>();
 
                 for (int i = 0; i < 2; i++)
                 {
-                    int rng = rnd.Next(0, queue.users.Count);
-                    captains.Add(queue.users[rng]);
-                    queue.users.Remove(queue.users[rng]);
+                    int rng = rnd.Next(0, queue.Users.Count);
+                    captains.Add(queue.Users[rng]);
+                    queue.Users.Remove(queue.Users[rng]);
+
+                    // remove this user from every queue he might be in
+                    Parallel.ForEach(queues.Where(x => x.Users.Contains(queue.Users[rng])), x => x.Users.Remove(queue.Users[rng]));
                 }
 
-                await ReplyAsync("", embed: new EmbedBuilder()
+                await ReplyAsync(mentions, embed: new EmbedBuilder()
                     .WithColor(RLBot.EMBED_COLOR)
                     .WithTitle("Inhouse captains")
                     .AddField("Captain A", captains[0].Mention, true)
                     .AddField("Captain B", captains[1].Mention, true)
-                    .AddField("Remaining", string.Join(", ", queue.users.Select(x => x.Mention)))
+                    .AddField("Remaining", string.Join(", ", queue.Users.Select(x => x.Mention)))
                     .Build());
-
-                queue.users.Clear();
+                
+                // remove the remaning users from queue's they might be in
+                foreach (SocketUser user in queue.Users)
+                    Parallel.ForEach(queues.Where(x => x.Users.Contains(user)), x => x.Users.Remove(user));
                 queues.Remove(queue);
             }
             else
-                await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.users.Count));
-        }
+                await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
+        }*/
 
         [Command("qresult")]
         [Summary("Submit the score for a queue")]
@@ -352,7 +421,7 @@ namespace RLBot.Modules
             }
         }
 
-        private async Task<long> InsertQueueData(List<SocketUser> team_a, List<SocketUser> team_b)
+        private async Task<long> InsertQueueData(RLPlaylist type, List<SocketUser> team_a, List<SocketUser> team_b)
         {
             long queueId = -1;
             using (SqlConnection conn = RLBot.GetSqlConnection())
@@ -365,7 +434,8 @@ namespace RLBot.Modules
                         using (SqlCommand cmd = conn.CreateCommand())
                         {
                             cmd.Transaction = tr;
-                            cmd.CommandText = "INSERT INTO Queue(ScoreTeamA, ScoreTeamB, Created) OUTPUT INSERTED.QueueID VALUES(0, 0, GETDATE());";
+                            cmd.Parameters.AddWithValue("@Type", DbType.Byte).Value = (byte)type;
+                            cmd.CommandText = "INSERT INTO Queue(ScoreTeamA, ScoreTeamB, Created, Type) OUTPUT INSERTED.QueueID VALUES(0, 0, GETDATE(), @Type);";
                             var res = await cmd.ExecuteScalarAsync();
                             queueId = (long)res;
                         }
@@ -451,8 +521,7 @@ namespace RLBot.Modules
             i = 0;
             foreach (SocketUser user in team)
             {
-                var gu = Context.Guild.GetUser(user.Id);
-                tasks[i] = (gu).ModifyAsync(x => x.Channel = voiceChannel);
+                tasks[i] = Context.Guild.GetUser(user.Id)?.ModifyAsync(x => x.Channel = voiceChannel);
                 i++;
             }
 

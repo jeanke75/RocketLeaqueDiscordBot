@@ -9,6 +9,8 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using RLBot.Handlers;
+using RLBot.Models;
+using RLBot.TypeReaders;
 
 namespace RLBot
 {
@@ -31,6 +33,7 @@ namespace RLBot
             });
             _commands = new CommandService();
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
+            _commands.AddTypeReader<RLPlaylist>(new RLPlaylistTypeReader());
 
             var serv = InstallServices();
             serv.GetRequiredService<CommandHandler>();
