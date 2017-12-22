@@ -435,7 +435,7 @@ namespace RLBot.Modules
                         {
                             cmd.Transaction = tr;
                             cmd.Parameters.AddWithValue("@Type", DbType.Byte).Value = (byte)type;
-                            cmd.CommandText = "INSERT INTO Queue(ScoreTeamA, ScoreTeamB, Created, Type) OUTPUT INSERTED.QueueID VALUES(0, 0, GETDATE(), @Type);";
+                            cmd.CommandText = "INSERT INTO Queue(ScoreTeamA, ScoreTeamB, Created, Playlist) OUTPUT INSERTED.QueueID VALUES(0, 0, GETDATE(), @Type);";
                             var res = await cmd.ExecuteScalarAsync();
                             queueId = (long)res;
                         }
