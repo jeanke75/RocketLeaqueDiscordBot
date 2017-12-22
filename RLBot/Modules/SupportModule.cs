@@ -13,8 +13,6 @@ namespace RLBot.Modules
         [Remarks("suggestion <your suggestion>")]
         public async Task SuggestionAsync([Remainder] string suggestion)
         {
-            if (suggestion == "") return;
-
             var channel = Context.Client.GetChannel(393390897573789699) as IMessageChannel;
             if (channel == null)
             {
