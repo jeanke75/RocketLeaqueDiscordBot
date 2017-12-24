@@ -333,18 +333,20 @@ namespace RLBot.Modules
             if (queue.Users.Count == queue.GetSize())
             {
                 string mentions = string.Join(", ", queue.Users.Values.Select(x => x.Mention));
-                var usersArray = queue.Users.Values.ToArray();
+                var users = queue.Users.Values.ToList();
 
                 List<SocketUser> team_a = new List<SocketUser>();
                 List<SocketUser> team_b = new List<SocketUser>();
                 for (int i = 0; i < queue.GetSize(); i++)
                 {
                     int rng = rnd.Next(0, queue.Users.Count);
-                    var rngUser = usersArray[rng];
+                    var rngUser = users[rng];
                     if (i % 2 == 0)
                         team_a.Add(rngUser);
                     else
                         team_b.Add(rngUser);
+
+                    users.Remove(rngUser);
                     
                     // remove this user from every queue he might be in
                     Parallel.ForEach(queues.Values.Where(x => x.Users.ContainsKey(rngUser.Id)), x => x.Users.TryRemove(rngUser.Id, out SocketUser removedUser));
