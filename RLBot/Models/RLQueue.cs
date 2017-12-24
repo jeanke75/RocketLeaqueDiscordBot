@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using Discord.WebSocket;
 
 namespace RLBot.Models
@@ -23,7 +23,7 @@ namespace RLBot.Models
         public RLPlaylist Playlist { get; private set; }
         public bool IsLeaderboardQueue { get; private set; }
         public SocketGuildChannel Channel { get; private set; }
-        public List<SocketUser> Users { get; private set; }
+        public ConcurrentDictionary<ulong, SocketUser> Users { get; private set; }
 
         private RLQueue(RLPlaylist playlist, SocketGuildChannel channel, bool isLeaderboardQueue)
         {
@@ -32,7 +32,7 @@ namespace RLBot.Models
             IsLeaderboardQueue = isLeaderboardQueue;
             Channel = channel;
             
-            Users = new List<SocketUser>();
+            Users = new ConcurrentDictionary<ulong, SocketUser>();
         }
 
         public static RLQueue DuelQueue(SocketGuildChannel channel, bool isLeaderboardQueue)
