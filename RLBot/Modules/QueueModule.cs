@@ -83,6 +83,12 @@ namespace RLBot.Modules
                         return;
                 }
 
+                if (queue == null)
+                {
+                    await ReplyAsync("This command can only be used in the `1v1`, `2v2` and `3v3` channels.");
+                    return;
+                }
+
                 if (queues.TryAdd(Context.Channel.Id, queue))
                     await ReplyAsync("The queue is open. Type \"" + RLBot.COMMAND_PREFIX + "qjoin\", to join it.");
                 else
