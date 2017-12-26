@@ -347,9 +347,13 @@ namespace RLBot.Modules
                         team_b.Add(rngUser);
 
                     users.Remove(rngUser);
-                    
+
                     // remove this user from every queue he might be in
-                    Parallel.ForEach(queues.Values.Where(x => x.Users.ContainsKey(rngUser.Id)), x => x.Users.TryRemove(rngUser.Id, out SocketUser removedUser));
+                    var queuesUserIsIn = queues.Values?.Where(x => x.Users.ContainsKey(rngUser.Id));
+                    foreach (RLQueue joinedQueue in queuesUserIsIn)
+                    {
+                        joinedQueue?.Users.TryRemove(rngUser.Id, out SocketUser removedUser);
+                    }
                 }
 
                 queues.TryRemove(Context.Channel.Id, out RLQueue removedQueue);
