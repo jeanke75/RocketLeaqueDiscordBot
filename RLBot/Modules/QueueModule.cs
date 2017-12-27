@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Discord.Net;
 using Discord.WebSocket;
 using RLBot.Models;
 
@@ -318,7 +319,7 @@ namespace RLBot.Modules
             queue.Users.Clear();
             await ReplyAsync("The queue has been reset!");
         }
-        
+
         [Command("qpick")]
         [Alias("qp")]
         [Summary("Randomly divide the players into 2 even teams")]
@@ -351,7 +352,7 @@ namespace RLBot.Modules
                         team_a.Add(rngUser);
                     else
                         team_b.Add(rngUser);
-
+                    
                     users.Remove(rngUser);
 
                     // remove this user from every queue he might be in
@@ -359,6 +360,21 @@ namespace RLBot.Modules
                     foreach (RLQueue joinedQueue in queuesUserIsIn)
                     {
                         joinedQueue?.Users.TryRemove(rngUser.Id, out SocketUser removedUser);
+                    }
+
+                    // try to DM this user if he's playing a game
+                    if (Context.Message.Author.Game.HasValue)
+                    {
+                        try
+                        {
+                            var dmChannel = await rngUser.GetOrCreateDMChannelAsync();
+                            await dmChannel.SendMessageAsync("Teams have been picked and the match is ready to be played.");
+                        }
+                        catch (HttpException ex)
+                        when (ex.DiscordCode == 50007)
+                        {
+                            // do nothing, this person has DM's blocked
+                        }
                     }
                 }
 
@@ -369,7 +385,7 @@ namespace RLBot.Modules
                     .WithTitle($"{queue.Playlist} teams")
                     .AddField("Team A", $"{string.Join("\n", team_a)}", true)
                     .AddField("Team B", $"{string.Join("\n", team_b)}", true);
-                
+
                 if (queue.IsLeaderboardQueue)
                 {
                     long queueId = await InsertQueueData(queue.Playlist, team_a, team_b);
@@ -377,13 +393,16 @@ namespace RLBot.Modules
                     embedBuilder.AddField("ID", queueId);
                     embedBuilder.WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult {queueId} <score A> <score B>");
 
-                    var msg = ReplyAsync(mentions, false, embedBuilder.Build());
+                    await ReplyAsync(mentions, false, embedBuilder.Build());
+                    
+                    if (queue.Playlist != RLPlaylist.Duel)
+                    {
+                        // create voice channels, set player permissions and move the players into the channels
+                        var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
+                        var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
 
-                    // create voice channels, set player permissions and move the players into the channels
-                    var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
-                    var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
-
-                    await Task.WhenAll(msg, teamA, teamB);
+                        await Task.WhenAll(teamA, teamB);
+                    }
                 }
                 else
                 {
@@ -454,7 +473,7 @@ namespace RLBot.Modules
         [Command("qresult")]
         [Summary("Submit the score for a queue")]
         [Remarks("qresult <queue ID> <score team A> <score team B>")]
-        [RequireBotPermission(GuildPermission.SendMessages)]
+        [RequireBotPermission(GuildPermission.SendMessages | GuildPermission.ManageChannels | GuildPermission.MoveMembers)]
         public async Task SetResultAsync(long queueId, byte scoreTeamA, byte scoreTeamB)
         {
             if (scoreTeamA < 0 || scoreTeamB < 0 || scoreTeamA == scoreTeamB)
@@ -539,12 +558,24 @@ namespace RLBot.Modules
                         tr.Commit();
 
                         var channels = Context.Guild.VoiceChannels.Where(x => x.Name.Contains($"#{queueId}")).ToArray();
-                        var tasks = new Task[channels.Count()];
+                        var channelUsers = channels.SelectMany(x => x.Users).ToArray();
+
+                        // move users back to the general voice channel
+                        var usersTasks = new Task[channelUsers.Count()];
+                        for (int i = 0; i < usersTasks.Length; i++)
+                        {
+                            usersTasks[i] = channelUsers[i].ModifyAsync(x => x.ChannelId = 385131574817062915);
+                        }
+
+                        await Task.WhenAll(usersTasks);
+
+                        // delete channels
+                        var channelsTasks = new Task[channels.Count()];
                         for (int i = 0; i < channels.Length; i++)
                         {
-                            tasks[i] = channels[i].DeleteAsync();
+                            channelsTasks[i] = channels[i].DeleteAsync();
                         }
-                        await Task.WhenAll(tasks);
+                        await Task.WhenAll(channelsTasks);
 
                         await ReplyAsync($"The score for queue {queueId} has been submitted");
                     }
