@@ -26,7 +26,11 @@ namespace RLBot.Modules
         private readonly string DB_QUEUEPLAYER_SELECT = "SELECT * FROM QueuePlayer WHERE QueueID = @QueueID AND UserID = @UserID;";
         private readonly string DB_QUEUE_UPDATE = "UPDATE Queue SET ScoreTeamA = @ScoreTeamA, ScoreTeamB = @ScoreTeamB WHERE QueueID = @QueueID;";
         private readonly string DB_QUEUE_SUBSTITUTE = "UPDATE QueuePlayer SET UserID = @NewUserID WHERE QueueID = @QueueID AND UserID = @CurrentUserID;";
-        
+
+        private readonly OverwritePermissions botPerms = new OverwritePermissions(PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow);
+        private readonly OverwritePermissions teamPerms = new OverwritePermissions(PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny);
+        private readonly OverwritePermissions everyonePerms = new OverwritePermissions(PermValue.Deny, PermValue.Inherit, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny);
+
         [Command("qopen")]
         [Alias("qo")]
         [Summary("Create a new queue from which two 3man teams will be picked")]
@@ -176,18 +180,17 @@ namespace RLBot.Modules
         
         [Command("qsub")]
         [Summary("Substitue one player for another in a queue")]
-        [Remarks("qsub <queue ID> <player to sub in> <player to sub out>")]
-        [RequireOwner]
+        [Remarks("qsub <queue ID> <@substitute> <@current player>")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        public async Task SubstitutePlayerAsync(long queueId, SocketUser playerIn, SocketUser playerOut)
+        public async Task SubstitutePlayerAsync(long queueId, SocketUser subPlayer, SocketUser currentPlayer)
         {
-            if (playerIn.Id == playerOut.Id)
+            if (subPlayer.Id == currentPlayer.Id)
             {
                 await ReplyAsync("You cannot sub the user for himself!");
                 return;
             }
 
-            if (playerIn.IsBot || playerOut.IsBot)
+            if (subPlayer.IsBot || currentPlayer.IsBot)
             {
                 await ReplyAsync("You can't sub a bot into a queue!");
                 return;
@@ -235,44 +238,53 @@ namespace RLBot.Modules
                             return;
                         }
 
-                        bool currentInQueue = false;
+                        // retrieve all the players in the queue
+                        List<QueuePlayerRecord> playersInQueue = new List<QueuePlayerRecord>();
                         using (SqlCommand cmd = conn.CreateCommand())
                         {
                             cmd.Transaction = tr;
                             cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
-                            cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)playerOut.Id;
-                            cmd.CommandText = DB_QUEUEPLAYER_SELECT;
+                            cmd.CommandText = "SELECT UserID, Team FROM QueuePlayer WHERE QueueID = @QueueID;";
                             using (SqlDataReader reader = cmd.ExecuteReader())
                             {
-                                currentInQueue = reader.HasRows;
+                                while (await reader.ReadAsync())
+                                {
+                                    var playerInQueue = new QueuePlayerRecord
+                                    {
+                                        UserId = (ulong)(decimal)reader["UserID"],
+                                        Team = (byte)reader["Team"]
+                                    };
+                                    playersInQueue.Add(playerInQueue);
+                                }
                                 reader.Close();
                             }
                         }
 
-                        if (!currentInQueue)
+                        // check if the player to sub out is in the queue and the player to sub in isn't
+                        QueuePlayerRecord currentInQueue = null;
+                        foreach (QueuePlayerRecord rec in playersInQueue)
                         {
-                            await ReplyAsync($"The player {playerOut}, who is to be subbed out is not in queue {queueId}");
+                            if (rec.UserId == currentPlayer.Id)
+                            {
+                                currentInQueue = rec;
+                            }
+                            else if (rec.UserId == subPlayer.Id)
+                            {
+                                await ReplyAsync($"The player {subPlayer}, who is to be subbed in is already in queue {queueId}");
+                                return;
+                            }
+                        }
+
+                        if (currentInQueue == null)
+                        {
+                            await ReplyAsync($"The player {currentPlayer}, who is to be subbed out is not in queue {queueId}");
                             return;
                         }
 
-                        // check if the player in isn't already part of the queue
-                        bool subInQueue = false;
-                        using (SqlCommand cmd = conn.CreateCommand())
-                        {
-                            cmd.Transaction = tr;
-                            cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
-                            cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)playerIn.Id;
-                            cmd.CommandText = DB_QUEUEPLAYER_SELECT;
-                            using (SqlDataReader reader = cmd.ExecuteReader())
-                            {
-                                subInQueue = reader.HasRows;
-                                reader.Close();
-                            }
-                        }
 
-                        if (!currentInQueue)
+                        if (Context.Message.Author.Id != RLBot.APPLICATION_OWNER_ID && playersInQueue.SingleOrDefault(x => x.UserId == Context.Message.Author.Id).Team != currentInQueue.Team)
                         {
-                            await ReplyAsync($"The player {playerIn}, who is to be subbed in is already in queue {queueId}");
+                            await ReplyAsync($"{Context.Message.Author.Mention}, you can only substitue players from your own team!");
                             return;
                         }
 
@@ -281,14 +293,18 @@ namespace RLBot.Modules
                         {
                             cmd.Transaction = tr;
                             cmd.Parameters.AddWithValue("@QueueID", DbType.Decimal).Value = (decimal)queueId;
-                            cmd.Parameters.AddWithValue("@NewUserID", DbType.Decimal).Value = (decimal)playerIn.Id;
-                            cmd.Parameters.AddWithValue("@CurrentUserID", DbType.Decimal).Value = (decimal)playerOut.Id;
+                            cmd.Parameters.AddWithValue("@NewUserID", DbType.Decimal).Value = (decimal)subPlayer.Id;
+                            cmd.Parameters.AddWithValue("@CurrentUserID", DbType.Decimal).Value = (decimal)currentPlayer.Id;
                             cmd.CommandText = DB_QUEUE_SUBSTITUTE;
                             await cmd.ExecuteNonQueryAsync();
                         }
                         tr.Commit();
 
-                        await ReplyAsync($"Queue {queueId}: {playerIn} substituted {playerOut}!");
+                        var voiceChannel = Context.Guild.VoiceChannels.SingleOrDefault(x => x.Name.Equals($"Team {(currentInQueue.Team == 0 ? "A" : "B")} #{queueId}"));
+                        await voiceChannel.AddPermissionOverwriteAsync(subPlayer, teamPerms);
+                        await voiceChannel.RemovePermissionOverwriteAsync(currentPlayer);
+
+                        await ReplyAsync($"Queue {queueId}: {subPlayer} substituted {currentPlayer}!");
                     }
                     catch (Exception ex)
                     {
@@ -667,11 +683,9 @@ namespace RLBot.Modules
             });
 
             // set the bot's permissions
-            OverwritePermissions botPerms = new OverwritePermissions(PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow);
             await voiceChannel.AddPermissionOverwriteAsync(Context.Client.CurrentUser, botPerms);
 
             // set the team's players permissions and move player
-            OverwritePermissions teamPerms = new OverwritePermissions(PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny);
             Task[] tasks = new Task[team.Count];
             int i = 0;
             foreach (SocketUser user in team)
@@ -684,7 +698,6 @@ namespace RLBot.Modules
             await Task.WhenAll(tasks);
 
             // remove all permissions for everyone else
-            OverwritePermissions everyonePerms = new OverwritePermissions(PermValue.Deny, PermValue.Inherit, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny);
             await voiceChannel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole, everyonePerms);
 
             // move the team into the voice channel
