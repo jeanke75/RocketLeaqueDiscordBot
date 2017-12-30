@@ -186,6 +186,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\LeaderboardRecord.cs" />
+    <Compile Include="Models\QueuePlayerRecord.cs" />
     <Compile Include="Models\RLQueue.cs" />
     <Compile Include="Modules\DatabaseModule.cs" />
     <Compile Include="Modules\HelpModule.cs" />
