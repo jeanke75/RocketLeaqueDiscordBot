@@ -368,7 +368,7 @@ namespace RLBot.Modules
                         team_a.Add(rngUser);
                     else
                         team_b.Add(rngUser);
-                    
+
                     users.Remove(rngUser);
 
                     // remove this user from every queue he might be in
@@ -399,9 +399,11 @@ namespace RLBot.Modules
                 var embedBuilder = new EmbedBuilder()
                     .WithColor(RLBot.EMBED_COLOR)
                     .WithTitle($"{queue.Playlist} teams")
-                    .AddField("Team A", $"{string.Join("\n", team_a)}", true)
-                    .AddField("Team B", $"{string.Join("\n", team_b)}", true);
+                    .AddField("Team A", $"{string.Join("\n", team_a.Select(x => x.Mention))}", true)
+                    .AddField("Team B", $"{string.Join("\n", team_b.Select(x => x.Mention))}", true)
+                    .AddField("Match host", team_a[0].Mention);
 
+                string matchDetails = $"**__Match details__**\n";
                 if (queue.IsLeaderboardQueue)
                 {
                     long queueId = await InsertQueueData(queue.Playlist, team_a, team_b);
@@ -410,7 +412,7 @@ namespace RLBot.Modules
                     embedBuilder.WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult {queueId} <score A> <score B>");
 
                     await ReplyAsync(mentions, false, embedBuilder.Build());
-                    
+
                     if (queue.Playlist != RLPlaylist.Duel)
                     {
                         // create voice channels, set player permissions and move the players into the channels
@@ -419,11 +421,27 @@ namespace RLBot.Modules
 
                         await Task.WhenAll(teamA, teamB);
                     }
+
+                    matchDetails += $"**ID:** {queueId}\n**Name:** CNQ{queueId}\n";
                 }
                 else
                 {
                     await ReplyAsync(mentions, false, embedBuilder.Build());
+                    matchDetails += $"**Name:** CNQ{rnd.Next(100, 100000)}\n";
                 }
+
+                // DM all the players in the queue the server details
+                matchDetails += $"**Password:** {GeneratePassword()}";
+                Task[] tasks = new Task[team_a.Count + team_b.Count];
+                int t = 0;
+                foreach (SocketUser user in team_a.Union(team_b))
+                {
+                    var DMChannel = await user.GetOrCreateDMChannelAsync();
+                    tasks[t] = DMChannel.SendMessageAsync(matchDetails);
+                    t++;
+                }
+
+                await Task.WhenAll(tasks);
             }
             else
                 await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
@@ -711,5 +729,18 @@ namespace RLBot.Modules
 
             await Task.WhenAll(tasks);
         }
+
+        private string GeneratePassword()
+        {
+            string set = "abcdefghijklmnopqrstuvwxyz1234567890";
+            string password = "";
+            for (int i = 0; i < 3; i++)
+            {
+                int p = rnd.Next(set.Length);
+                password += set.Substring(p, 1);
+            }
+
+            return password;
+        } 
     }
 }
