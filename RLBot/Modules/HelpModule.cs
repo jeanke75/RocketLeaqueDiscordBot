@@ -20,7 +20,7 @@ namespace RLBot.Modules
         }
 
         [Name("help")]
-        [Command]
+        [Command(RunMode = RunMode.Async)]
         [Summary("List all the modules in the bot")]
         public async Task HelpAsync()
         {
@@ -45,7 +45,7 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("module")]
+        [Command("module", RunMode = RunMode.Async)]
         [Summary("List all the commands in a module")]
         [Remarks("help module <module name>")]
         public async Task HelpModuleAsync(string moduleName)
@@ -88,7 +88,7 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("command")]
+        [Command("command", RunMode = RunMode.Async)]
         [Summary("List a command's details")]
         [Remarks("help command <command name>")]
         public async Task HelpCommandAsync(string c)

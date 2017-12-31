@@ -15,7 +15,7 @@ namespace RLBot.Modules
     [Summary("General information")]
     public class InfoModule : ModuleBase<SocketCommandContext>
     {
-        [Command("invite")]
+        [Command("invite", RunMode = RunMode.Async)]
         [Summary("Returns the OAuth2 Invite URL of the bot")]
         [Remarks("invite")]
         public async Task Invite()
@@ -30,13 +30,13 @@ namespace RLBot.Modules
             await ReplyAsync($"A user with `MANAGE_SERVER` can invite me to your server here: <https://discordapp.com/oauth2/authorize?client_id={application.Id}&scope=bot&permissions={requiredPermissions}>");
         }
 
-        [Command("ping")]
+        [Command("ping", RunMode = RunMode.Async)]
         [Summary("Ping to see the latency")]
         [Remarks("ping")]
         public async Task PingAsync()
             => await ReplyAsync($"Pong! - {Context.Client.Latency}ms");
 
-        [Command("botinfo")]
+        [Command("botinfo", RunMode = RunMode.Async)]
         [Summary("General info about the bot")]
         [Remarks("botinfo")]
         public async Task InfoAsync()
@@ -80,7 +80,7 @@ namespace RLBot.Modules
                 .Build());
         }
 
-        [Command("userinfo")]
+        [Command("userinfo", RunMode = RunMode.Async)]
         [Alias("user", "whois")]
         [Summary("Returns info about the current user, or the user parameter, if one passed.")]
         [Remarks("userinfo (<user>)")]

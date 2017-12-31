@@ -8,7 +8,7 @@ namespace RLBot.Modules
     [Summary("Bot support")]
     public class SupportModule : ModuleBase<SocketCommandContext>
     {
-        [Command("suggestion")]
+        [Command("suggestion", RunMode = RunMode.Async)]
         [Summary("Send in suggestions for new features or improvements for the bot.")]
         [Remarks("suggestion <your suggestion>")]
         public async Task SuggestionAsync([Remainder] string suggestion)
@@ -35,7 +35,7 @@ namespace RLBot.Modules
             await ReplyAsync("Succesfully submitted the suggestion.");
         }
 
-        [Command("bugreport")]
+        [Command("bugreport", RunMode = RunMode.Async)]
         [Summary("Send in a detailed bugreport for the bot. Try to describe how to reproduce it if possible.")]
         [Remarks("bugreport <your bugreport>")]
         public async Task BugReportAsync([Remainder] string bug)

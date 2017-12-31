@@ -18,7 +18,7 @@ namespace RLBot.Modules
         readonly string DB_TOP_5_MONTHLY = "SELECT TOP 5 qp.UserID, ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR (qp.Team = 1 AND q.ScoreTeamA < q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID WHERE ((q.ScoreTeamA > 0 OR q.ScoreTeamB > 0) OR (DATEDIFF(hour, q.Created, GetDate()) > 24)) AND q.Created >= CAST(DATEADD(dd, -DAY(GETDATE()) + 1, GETDATE()) AS DATE) AND q.Created < CAST(DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) AS DATE) AND q.Playlist = @Playlist GROUP BY qp.UserID ORDER BY 2 DESC, 3 ASC";
         readonly string DB_TOP_5_ALL_TIME = "SELECT TOP 5 qp.UserID, ISNULL(SUM(CASE WHEN ((qp.Team = 0 AND q.ScoreTeamA > q.ScoreTeamB) OR (qp.Team = 1 AND q.ScoreTeamA < q.ScoreTeamB)) THEN 1 END), 0) as Wins, COUNT(1) as TotalGames FROM Queue q INNER JOIN QueuePlayer qp ON qp.QueueID = q.QueueID WHERE ((q.ScoreTeamA > 0 OR q.ScoreTeamB > 0) OR (DATEDIFF(hour, q.Created, GetDate()) > 24)) AND q.Playlist = @Playlist GROUP BY qp.UserID ORDER BY 2 DESC, 3 ASC";
 
-        [Command("stats")]
+        [Command("stats", RunMode = RunMode.Async)]
         [Summary("Returns leaderboard info about the current user, or the user parameter, if one passed.")]
         [Remarks("stats <playlist> <optional user>")]
         public async Task StatsAsync([OverrideTypeReader(typeof(RLPlaylistTypeReader))] RLPlaylist playlist, IUser user = null)
@@ -67,7 +67,7 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("top5")]
+        [Command("top5", RunMode = RunMode.Async)]
         [Summary("Returns the 5 players with the most wins for both Monthly and All-Time.")]
         [Remarks("top5 <playlist>")]
         public async Task Top5Async([OverrideTypeReader(typeof(RLPlaylistTypeReader))] RLPlaylist playlist)

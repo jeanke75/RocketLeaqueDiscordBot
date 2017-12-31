@@ -12,7 +12,7 @@ namespace RLBot.Modules
     [RequireOwner]
     public class DatabaseModule : ModuleBase<SocketCommandContext>
     {
-        [Command("sql")]
+        [Command("sql", RunMode = RunMode.Async)]
         [Summary("Run an sql command against the database that does not return a result. (insert, update, delete)")]
         [Remarks("sql <sql command>")]
         public async Task RunSQLCommand([Remainder]string command)
@@ -49,7 +49,7 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("tables")]
+        [Command("tables", RunMode = RunMode.Async)]
         [Summary("Show a list of all the tables in the database")]
         [Remarks("tables")]
         public async Task TablesAsync()
@@ -91,7 +91,7 @@ namespace RLBot.Modules
             }
         }
 
-        [Command("select")]
+        [Command("select", RunMode = RunMode.Async)]
         [Summary("Run a select command against the database")]
         [Remarks("select <rest of the select command>")]
         public async Task SelectAsync([Remainder]string command)
