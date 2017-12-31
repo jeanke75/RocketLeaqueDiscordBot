@@ -432,16 +432,19 @@ namespace RLBot.Modules
 
                 // DM all the players in the queue the server details
                 matchDetails += $"**Password:** {GeneratePassword()}";
-                Task[] tasks = new Task[team_a.Count + team_b.Count];
-                int t = 0;
                 foreach (SocketUser user in team_a.Union(team_b))
                 {
-                    var DMChannel = await user.GetOrCreateDMChannelAsync();
-                    tasks[t] = DMChannel.SendMessageAsync(matchDetails);
-                    t++;
+                    try
+                    {
+                        var DMChannel = await user.GetOrCreateDMChannelAsync();
+                        await DMChannel.SendMessageAsync(matchDetails);
+                    }
+                    catch (HttpException ex)
+                    when (ex.DiscordCode == 50007)
+                    {
+                        await ReplyAsync($"{user.Mention}, you are blocking DM's, unable to send the match details.");
+                    }
                 }
-
-                await Task.WhenAll(tasks);
             }
             else
                 await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
