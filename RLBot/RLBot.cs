@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,6 +58,7 @@ namespace RLBot
                 .AddSingleton(_commands)
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<ReactionHandler>()
+                .AddSingleton<InteractiveService>()
                 .BuildServiceProvider();
         }
 
