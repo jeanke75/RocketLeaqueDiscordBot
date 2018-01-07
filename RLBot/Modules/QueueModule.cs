@@ -377,21 +377,6 @@ namespace RLBot.Modules
                     {
                         joinedQueue?.Users.TryRemove(rngUser.Id, out SocketUser removedUser);
                     }
-
-                    // try to DM this user if he's playing a game
-                    if (Context.Message.Author.Game.HasValue)
-                    {
-                        try
-                        {
-                            var dmChannel = await rngUser.GetOrCreateDMChannelAsync();
-                            await dmChannel.SendMessageAsync("Teams have been picked and the match is ready to be played.");
-                        }
-                        catch (HttpException ex)
-                        when (ex.DiscordCode == 50007)
-                        {
-                            // do nothing, this person has DM's blocked
-                        }
-                    }
                 }
 
                 queues.TryRemove(Context.Channel.Id, out RLQueue removedQueue);
