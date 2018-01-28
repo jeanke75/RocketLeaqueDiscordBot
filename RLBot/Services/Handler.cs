@@ -2,7 +2,7 @@
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace RLBot.Handlers
+namespace RLBot.Services
 {
     public class Handler
     {

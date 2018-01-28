@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Configuration;
-using System.Data.SqlClient;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -9,8 +7,9 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using RLBot.Handlers;
+using RLBot.API.RLS.Data;
 using RLBot.Models;
+using RLBot.Services;
 using RLBot.TypeReaders;
 
 namespace RLBot
@@ -34,11 +33,13 @@ namespace RLBot
             });
             _commands = new CommandService();
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
+            _commands.AddTypeReader<RLPlaylist>(new RLPlatformTypeReader());
+            _commands.AddTypeReader<RlsRegion>(new RLRegionTypeReader());
             _commands.AddTypeReader<RLPlaylist>(new RLPlaylistTypeReader());
-
+            
             var serv = InstallServices();
-            serv.GetRequiredService<CommandHandler>();
-            serv.GetRequiredService<ReactionHandler>();
+            serv.GetRequiredService<ReliabilityService>();
+            serv.GetRequiredService<CommandHandlerService>();
 
             _client.Log += Log;
             _commands.Log += Log;
@@ -56,8 +57,8 @@ namespace RLBot
             return new ServiceCollection()
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
-                .AddSingleton<CommandHandler>()
-                .AddSingleton<ReactionHandler>()
+                .AddSingleton<ReliabilityService>()
+                .AddSingleton<CommandHandlerService>()
                 .AddSingleton<InteractiveService>()
                 .BuildServiceProvider();
         }
@@ -66,21 +67,6 @@ namespace RLBot
         {
             Console.WriteLine(string.Concat("[", DateTime.Now.ToString("dd/MM/yyyy - HH:mm:ss"), "] [", msg.Severity, "] ", msg.Message, msg.Exception));
             return Task.CompletedTask;
-        }
-
-        public static SqlConnection GetSqlConnection()
-        {
-            Uri uri = new Uri(ConfigurationManager.AppSettings["SQLSERVER_URI"]);
-            string connectionString = new SqlConnectionStringBuilder
-            {
-                DataSource = uri.Host,
-                InitialCatalog = uri.AbsolutePath.Trim('/'),
-                UserID = uri.UserInfo.Split(':').First(),
-                Password = uri.UserInfo.Split(':').Last(),
-                MultipleActiveResultSets = true
-            }.ConnectionString;
-
-            return new SqlConnection(connectionString);
         }
     }
 }

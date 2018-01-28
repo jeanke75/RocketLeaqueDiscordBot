@@ -3,6 +3,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using Discord.Commands;
+using RLBot.Data;
 using RLBot.Preconditions;
 
 namespace RLBot.Modules
@@ -26,7 +27,7 @@ namespace RLBot.Modules
 
             try
             {
-                using (SqlConnection conn = RLBot.GetSqlConnection())
+                using (SqlConnection conn = Database.GetSqlConnection())
                 {
                     await conn.OpenAsync();
                     using (SqlTransaction tr = conn.BeginTransaction())
@@ -56,7 +57,7 @@ namespace RLBot.Modules
         {
             try
             {
-                using (SqlConnection conn = RLBot.GetSqlConnection())
+                using (SqlConnection conn = Database.GetSqlConnection())
                 {
                     await conn.OpenAsync();
                     try
@@ -99,7 +100,7 @@ namespace RLBot.Modules
             command = command.Trim();
             try
             {
-                using (SqlConnection conn = RLBot.GetSqlConnection())
+                using (SqlConnection conn = Database.GetSqlConnection())
                 {
                     await conn.OpenAsync();
                     try

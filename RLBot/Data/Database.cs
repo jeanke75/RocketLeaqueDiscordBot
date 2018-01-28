@@ -1,14 +1,106 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
+using RLBot.Data.Models;
 using RLBot.Models;
 
 namespace RLBot.Data
 {
     public static class Database
     {
-        public static async Task<LeaderboardRecord> GetLeaderboardUserStatsAsync(ulong userId, RLPlaylist playlist, bool monthly, SqlConnection conn)
+        public static SqlConnection GetSqlConnection()
+        {
+            Uri uri = new Uri(ConfigurationManager.AppSettings["SQLSERVER_URI"]);
+            string connectionString = new SqlConnectionStringBuilder
+            {
+                DataSource = uri.Host,
+                InitialCatalog = uri.AbsolutePath.Trim('/'),
+                UserID = uri.UserInfo.Split(':').First(),
+                Password = uri.UserInfo.Split(':').Last(),
+                MultipleActiveResultSets = true
+            }.ConnectionString;
+
+            return new SqlConnection(connectionString);
+        }
+
+        #region UserInfo
+        public static async Task<UserInfo> GetUserInfoAsync(ulong userId)
+        {
+            UserInfo result = null;
+            using (SqlConnection conn = GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)userId;
+                    cmd.CommandText = "SELECT * FROM UserInfo WHERE UserID = @UserID";
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            await reader.ReadAsync();
+                            result = new UserInfo()
+                            {
+                                UserID = userId,
+                                UniqueID = (string)reader["UniqueID"],
+                                JoinDate = (DateTime)reader["JoinDate"],
+                                Elo1s = (short)reader["Elo1s"],
+                                Elo2s = (short)reader["Elo2s"],
+                                Elo3s = (short)reader["Elo3s"]
+                            };
+                        }
+                        reader.Close();
+                    }
+                }
+            }
+            return result;
+        }
+
+        public static async Task InsertUserInfoAsync(ulong userId, string uniqueId, int elo1s, int elo2s, int elo3s)
+        {
+            using (SqlConnection conn = GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)userId;
+                    cmd.Parameters.AddWithValue("@UniqueID", DbType.String).Value = uniqueId;
+                    cmd.Parameters.AddWithValue("@Elo1s", DbType.Int16).Value = elo1s;
+                    cmd.Parameters.AddWithValue("@Elo2s", DbType.Int16).Value = elo2s;
+                    cmd.Parameters.AddWithValue("@Elo3s", DbType.Int16).Value = elo3s;
+                    cmd.CommandText = "INSERT INTO UserInfo(UserID, UniqueID, JoinDate, Elo1s, Elo2s, Elo3s) VALUES(@UserID, @UniqueID, GetDate(), @Elo1s, @Elo2s, @Elo3s)";
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+        }
+
+        public static async Task EditUserInfoAsync(ulong userId, int elo1s, int elo2s, int elo3s)
+        {
+            using (SqlConnection conn = GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)userId;
+                    cmd.Parameters.AddWithValue("@Elo1s", DbType.Int16).Value = elo1s;
+                    cmd.Parameters.AddWithValue("@Elo2s", DbType.Int16).Value = elo2s;
+                    cmd.Parameters.AddWithValue("@Elo3s", DbType.Int16).Value = elo3s;
+                    cmd.CommandText = "UPDATE UserInfo set Elo1s = @Elo1s, Elo2s = @Elo2s, Elo3s = @Elo3s WHERE UserID = @UserID";
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+        }
+        #endregion
+
+        #region Leaderboard
+        public static async Task<LeaderboardRecord> GetLeaderboardUserStatsAsync(ulong userId, RLPlaylist playlist, bool monthly, SqlConnection conn = null)
         {
             LeaderboardRecord rec = null;
             using (SqlCommand cmd = conn.CreateCommand())
@@ -65,5 +157,6 @@ namespace RLBot.Data
             }
             return records;
         }
+        #endregion
     }
 }

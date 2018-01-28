@@ -5,12 +5,14 @@ using Discord;
 using Discord.Commands;
 using RLBot.Data;
 using RLBot.Models;
+using RLBot.Preconditions;
 using RLBot.TypeReaders;
 
 namespace RLBot.Modules
 {
     [Name("Leaderboard")]
     [Summary("Everything involving the leaderboard")]
+    [RequireChannel(386261794366423060)]
     public class LeaderboardModule : ModuleBase<SocketCommandContext>
     {
         [Command("stats", RunMode = RunMode.Async)]
@@ -24,7 +26,7 @@ namespace RLBot.Modules
             LeaderboardRecord recordTotal = null;
             LeaderboardRecord recordMonthly = null; 
             
-            using (SqlConnection conn = RLBot.GetSqlConnection())
+            using (SqlConnection conn = Database.GetSqlConnection())
             {
                 await conn.OpenAsync();
                 try
@@ -67,7 +69,7 @@ namespace RLBot.Modules
             await Context.Channel.TriggerTypingAsync();
             LeaderboardRecord[] monthlyTop5 = null;
             LeaderboardRecord[] allTimeTop5 = null;
-            using (SqlConnection conn = RLBot.GetSqlConnection())
+            using (SqlConnection conn = Database.GetSqlConnection())
             {
                 await conn.OpenAsync();
                 try

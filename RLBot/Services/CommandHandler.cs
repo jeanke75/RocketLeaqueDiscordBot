@@ -3,11 +3,11 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace RLBot.Handlers
+namespace RLBot.Services
 {
-    public class CommandHandler : Handler
+    public class CommandHandlerService : Handler
     {
-        public CommandHandler(IServiceProvider services, DiscordSocketClient client, CommandService commands) : base(services, client, commands)
+        public CommandHandlerService(IServiceProvider services, DiscordSocketClient client, CommandService commands) : base(services, client, commands)
         {
             _client.MessageReceived += HandleCommandAsync;
         }

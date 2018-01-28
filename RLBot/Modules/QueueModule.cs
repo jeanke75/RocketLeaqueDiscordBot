@@ -10,7 +10,9 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.Net;
 using Discord.WebSocket;
+using RLBot.Data;
 using RLBot.Models;
+using RLBot.Preconditions;
 
 namespace RLBot.Modules
 {
@@ -36,6 +38,9 @@ namespace RLBot.Modules
         [Summary("Create a new queue from which two 3man teams will be picked")]
         [Remarks("qopen")]
         [RequireBotPermission(GuildPermission.SendMessages)]
+        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
+            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
+            385420072996438021, 385393503833948160)]
         public async Task OpenQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -108,6 +113,9 @@ namespace RLBot.Modules
         [Summary("Join the queue for 6man games")]
         [Remarks("qjoin")]
         [RequireBotPermission(GuildPermission.SendMessages)]
+        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
+            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
+            385420072996438021, 385393503833948160)]
         public async Task JoinQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -137,6 +145,9 @@ namespace RLBot.Modules
         [Summary("Leave the queue for 6man games")]
         [Remarks("qleave")]
         [RequireBotPermission(GuildPermission.SendMessages)]
+        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
+            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
+            385420072996438021, 385393503833948160)]
         public async Task LeaveQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -156,6 +167,9 @@ namespace RLBot.Modules
         [Summary("Show a list of all the people in the queue")]
         [Remarks("qstatus")]
         [RequireBotPermission(GuildPermission.EmbedLinks)]
+        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
+            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
+            385420072996438021, 385393503833948160)]
         public async Task ListOfPlayersInQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -182,6 +196,9 @@ namespace RLBot.Modules
         [Summary("Substitue one player for another in a queue")]
         [Remarks("qsub <queue ID> <@substitute> <@current player>")]
         [RequireBotPermission(GuildPermission.SendMessages)]
+        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
+            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
+            385420072996438021, 385393503833948160)]
         public async Task SubstitutePlayerAsync(long queueId, SocketUser subPlayer, SocketUser currentPlayer)
         {
             if (subPlayer.Id == currentPlayer.Id)
@@ -196,7 +213,7 @@ namespace RLBot.Modules
                 return;
             }
 
-            using (SqlConnection conn = RLBot.GetSqlConnection())
+            using (SqlConnection conn = Database.GetSqlConnection())
             {
                 await conn.OpenAsync();
                 using (SqlTransaction tr = conn.BeginTransaction())
@@ -324,6 +341,9 @@ namespace RLBot.Modules
         [Summary("Removes the current queue")]
         [Remarks("qreset")]
         [RequireBotPermission(GuildPermission.SendMessages)]
+        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
+            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
+            385420072996438021, 385393503833948160)]
         public async Task ResetQueueAsync()
         {
             if (!queues.TryRemove(Context.Channel.Id, out RLQueue queue))
@@ -341,6 +361,9 @@ namespace RLBot.Modules
         [Summary("Randomly divide the players into 2 even teams")]
         [Remarks("qpick")]
         [RequireBotPermission(GuildPermission.ManageChannels | GuildPermission.MoveMembers | GuildPermission.EmbedLinks)]
+        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
+            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
+            385420072996438021, 385393503833948160)]
         public async Task PickTeamsFromQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -496,6 +519,7 @@ namespace RLBot.Modules
         [Summary("Submit the score for a queue")]
         [Remarks("qresult <queue ID> <score team A> <score team B>")]
         [RequireBotPermission(GuildPermission.SendMessages | GuildPermission.ManageMessages | GuildPermission.AddReactions | GuildPermission.ManageChannels | GuildPermission.MoveMembers)]
+        [RequireChannel(398133512902934529)]
         public async Task SetResultAsync(long queueId, byte scoreTeamA, byte scoreTeamB)
         {
             if (scoreTeamA < 0 || scoreTeamB < 0 || scoreTeamA == scoreTeamB)
@@ -506,7 +530,7 @@ namespace RLBot.Modules
 
             List<ulong> players = new List<ulong>();
 
-            using (SqlConnection conn = RLBot.GetSqlConnection())
+            using (SqlConnection conn = Database.GetSqlConnection())
             {
                 await conn.OpenAsync();
                 try
@@ -670,7 +694,7 @@ namespace RLBot.Modules
             // Check if a majority vote was reached for check or if the check votes were higher then the cancel votes
             if (success || checkVotes > cancelVotes)
             {
-                using (SqlConnection conn = RLBot.GetSqlConnection())
+                using (SqlConnection conn = Database.GetSqlConnection())
                 {
                     await conn.OpenAsync();
                     using (SqlTransaction tr = conn.BeginTransaction())
@@ -711,7 +735,7 @@ namespace RLBot.Modules
         private async Task<long> InsertQueueData(RLPlaylist type, List<SocketUser> team_a, List<SocketUser> team_b)
         {
             long queueId = -1;
-            using (SqlConnection conn = RLBot.GetSqlConnection())
+            using (SqlConnection conn = Database.GetSqlConnection())
             {
                 await conn.OpenAsync();
                 using (SqlTransaction tr = conn.BeginTransaction())

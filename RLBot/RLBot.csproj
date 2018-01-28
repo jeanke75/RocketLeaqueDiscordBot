@@ -40,6 +40,10 @@
       <HintPath>..\packages\Discord.Addons.Interactive.1.0.1\lib\netstandard1.1\Discord.Addons.Interactive.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Discord.Addons.InteractiveCommands, Version=1.2.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Discord.Addons.InteractiveCommands.1.2.4\lib\netstandard1.3\Discord.Addons.InteractiveCommands.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Discord.Net.Commands, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Discord.Net.Commands.2.0.0-beta-00854\lib\netstandard1.1\Discord.Net.Commands.dll</HintPath>
       <Private>True</Private>
@@ -189,7 +193,32 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="API\RLS\Data\RlsPlatform.cs" />
+    <Compile Include="API\RLS\Data\RlsPlaylist.cs" />
+    <Compile Include="API\RLS\Data\RlsPlaylistRanked.cs" />
+    <Compile Include="API\RLS\Data\RlsRegion.cs" />
+    <Compile Include="API\RLS\Data\RlsSeason.cs" />
+    <Compile Include="API\RLS\Data\RlsStatType.cs" />
+    <Compile Include="API\RLS\Exceptions\RlsApiException.cs" />
+    <Compile Include="API\RLS\Net\ApiRequester.cs" />
+    <Compile Include="API\RLS\Net\ApiRequesterThrottle.cs" />
+    <Compile Include="API\RLS\Net\Models\Error.cs" />
+    <Compile Include="API\RLS\Net\Models\Platform.cs" />
+    <Compile Include="API\RLS\Net\Models\Player.cs" />
+    <Compile Include="API\RLS\Net\Models\PlayerRank.cs" />
+    <Compile Include="API\RLS\Net\Models\PlayerSearchPage.cs" />
+    <Compile Include="API\RLS\Net\Models\PlayerStats.cs" />
+    <Compile Include="API\RLS\Net\Models\Playlist.cs" />
+    <Compile Include="API\RLS\Net\Models\PlaylistPopulation.cs" />
+    <Compile Include="API\RLS\Net\Models\Season.cs" />
+    <Compile Include="API\RLS\Net\Models\Tier.cs" />
+    <Compile Include="API\RLS\Net\Requests\PlayerBatchRequest.cs" />
+    <Compile Include="API\RLS\RlsClient.cs" />
+    <Compile Include="API\RLS\Util\TimeUtil.cs" />
     <Compile Include="Data\Database.cs" />
+    <Compile Include="Data\Models\UserInfo.cs" />
+    <Compile Include="Preconditions\RequireChannelAtribute.cs" />
+    <Compile Include="Services\ReliabilityService.cs" />
     <Compile Include="Models\LeaderboardRecord.cs" />
     <Compile Include="Models\QueuePlayerRecord.cs" />
     <Compile Include="Models\RLQueue.cs" />
@@ -198,15 +227,17 @@
     <Compile Include="Modules\InfoModule.cs" />
     <Compile Include="Modules\LeaderboardModule.cs" />
     <Compile Include="Modules\QueueModule.cs" />
+    <Compile Include="Modules\SetUpModule.cs" />
     <Compile Include="Modules\SupportModule.cs" />
     <Compile Include="Preconditions\CooldownAttribute.cs" />
     <Compile Include="Preconditions\HiddenAttribute.cs" />
     <Compile Include="RLBot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Handlers\CommandHandler.cs" />
-    <Compile Include="Handlers\Handler.cs" />
-    <Compile Include="Handlers\ReactionHandler.cs" />
+    <Compile Include="Services\CommandHandler.cs" />
+    <Compile Include="Services\Handler.cs" />
+    <Compile Include="TypeReaders\RLPlatformTypeReader.cs" />
     <Compile Include="TypeReaders\RLPlaylistTypeReader.cs" />
+    <Compile Include="TypeReaders\RLRegionTypeReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
