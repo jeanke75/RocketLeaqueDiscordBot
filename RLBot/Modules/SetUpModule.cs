@@ -33,7 +33,6 @@ namespace RLBot.Modules
         [RequireChannel(385503590619545611)]
         public async Task LinkAsync([OverrideTypeReader(typeof(RLRegionTypeReader))] RlsRegion region, [OverrideTypeReader(typeof(RLPlatformTypeReader))] RlsPlatform platform, [Remainder]string uniqueId)
         {
-            var rolessss = Context.Guild.Roles;
             await Context.Channel.TriggerTypingAsync();
             var user = Context.Message.Author;
             try
@@ -223,7 +222,7 @@ namespace RLBot.Modules
                         return 386211454040276992;
                     else if (points > 1395)
                         return 373857123110617099;
-                    else if (points > 11195)
+                    else if (points > 1195)
                         return 375035896753553409;
                     else if (points > 935)
                         return 375020227328475138;
