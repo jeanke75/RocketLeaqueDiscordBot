@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Linq;
@@ -25,7 +26,103 @@ namespace RLBot.Modules
         {
             _RLSClient = new RlsClient(ConfigurationManager.AppSettings["RLSAPI_TOKEN"]);
         }
+        
+        [Command("link", RunMode = RunMode.Async)]
+        [Summary("Update your matchmaking account if not all playlists are linked yet.")]
+        [Remarks("link>")]
+        [RequireBotPermission(GuildPermission.EmbedLinks | GuildPermission.ManageRoles)]
+        [RequireChannel(385503590619545611)]
+        public async Task LinkAsync()
+        {
+            await Context.Channel.TriggerTypingAsync();
+            var user = Context.Message.Author as SocketGuildUser;
+            try
+            {
+                // check if discord id is already in the database
+                var userinfo = await Database.GetUserInfoAsync(user.Id);
+                if (userinfo == null)
+                {
+                    await ReplyAsync($"{user.Mention}, no account info provided.");
+                    return;
+                }
 
+                // check if there are still unlinked playlists
+                if (userinfo.Elo1s != -1 && userinfo.Elo2s != -1 && userinfo.Elo3s != -1)
+                {
+                    await ReplyAsync($"{user.Mention}, you've already linked all your rocket league playlists to your discord.");
+                    return;
+                }
+
+                // get the platform from the user
+                RlsPlatform platform = RlsPlatform.Steam;
+                if (user.Roles.Contains(Context.Guild.GetRole(386067580630073356)))
+                    platform = RlsPlatform.Steam;
+                else if (user.Roles.Contains(Context.Guild.GetRole(386067821035126784)))
+                    platform = RlsPlatform.Xbox;
+                else if (user.Roles.Contains(Context.Guild.GetRole(386067907093856256)))
+                    platform = RlsPlatform.Ps4;
+                else
+                {
+                    await ReplyAsync($"{user.Mention}, couldn't retrieve your platform.");
+                    return;
+                }
+
+                // try to retrieve the account info and check if previously unranked playlists are now ranked
+                var player = await _RLSClient.GetPlayerAsync(platform, userinfo.UniqueID);
+                if (player == null)
+                {
+                    await ReplyAsync($"Failed to retrieve player information!");
+                    return;
+                }
+
+                if (!player.RankedSeasons.TryGetValue(Enum.GetValues(typeof(RlsSeason)).Cast<RlsSeason>().Max(), out var season))
+                {
+                    await ReplyAsync($"{user.Mention}, the account was found, but no information could be retrieved for the current season.");
+                    return;
+                }
+
+                List<IRole> roles = new List<IRole>();
+                int rp1 = userinfo.Elo1s;
+                if (rp1 == -1 && season.TryGetValue(RlsPlaylistRanked.Duel, out PlayerRank duel))
+                {
+                    rp1 = duel.RankPoints;
+                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Duel, duel.RankPoints)));
+                }
+
+                int rp2 = userinfo.Elo2s;
+                if (rp2 == -1 && season.TryGetValue(RlsPlaylistRanked.Doubles, out PlayerRank doubles))
+                {
+                    rp2 = doubles.RankPoints;
+                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Doubles, doubles.RankPoints)));
+                }
+
+                int rp3 = userinfo.Elo3s;
+                if (rp3 == -1 && season.TryGetValue(RlsPlaylistRanked.Standard, out PlayerRank standard))
+                {
+                    rp3 = standard.RankPoints;
+                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Standard, rp3)));
+                }
+
+                if (rp1 == userinfo.Elo1s && rp2 == userinfo.Elo2s && rp3 == userinfo.Elo3s)
+                {
+                    await ReplyAsync($"{user.Mention}, no new playlists have been linked.");
+                    return;
+                }
+
+                // try to add the user to the database with their current elo
+                await Database.UpdateUserInfoAsync(user.Id, rp1, rp2, rp3);
+
+                // give the rolse to the user
+                await user.AddRolesAsync(roles);
+
+                await ReplyAsync($"{user.Mention}, new playlists have been linked!");
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync($"{user.Mention}, " + ex.Message);
+            }
+        }
+        
         [Command("link", RunMode = RunMode.Async)]
         [Summary("Set up your matchmaking account.")]
         [Remarks("link <region> <platform> <account ID>")]
@@ -34,13 +131,13 @@ namespace RLBot.Modules
         public async Task LinkAsync([OverrideTypeReader(typeof(RLRegionTypeReader))] RlsRegion region, [OverrideTypeReader(typeof(RLPlatformTypeReader))] RlsPlatform platform, [Remainder]string uniqueId)
         {
             await Context.Channel.TriggerTypingAsync();
-            var user = Context.Message.Author;
+            var user = Context.Message.Author as SocketGuildUser;
             try
             {
                 // check if discord id is already in the database
                 if (await Database.GetUserInfoAsync(user.Id) != null)
                 {
-                    await ReplyAsync($"{user.Mention}, you've already linked your rocket league account to your discord.");
+                    await ReplyAsync($"{user.Mention}, you've already linked your rocket league account to your discord. If not all playlists are linked do `!link`.");
                     return;
                 }
 
@@ -64,11 +161,13 @@ namespace RLBot.Modules
                     return;
                 }
 
+                List<IRole> roles = new List<IRole>();
                 int rp1 = -1;
                 if (season.TryGetValue(RlsPlaylistRanked.Duel, out PlayerRank duels))
                 {
-                    embedBuilder.AddField("1V1", GetRankString(duels.Tier) + $" ({duels.RankPoints})");
+                    embedBuilder.AddField("1V1", GetRankString(duels.Tier) + $" ({duels.RankPoints})", true);
                     rp1 = duels.RankPoints;
+                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Duel, rp1)));
                 }
                 else
                 {
@@ -78,8 +177,9 @@ namespace RLBot.Modules
                 int rp2 = -1;
                 if (season.TryGetValue(RlsPlaylistRanked.Doubles, out PlayerRank doubles))
                 {
-                    embedBuilder.AddField("2V2", GetRankString(doubles.Tier) + $" ({doubles.RankPoints})");
+                    embedBuilder.AddField("2V2", GetRankString(doubles.Tier) + $" ({doubles.RankPoints})", true);
                     rp2 = doubles.RankPoints;
+                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Doubles, rp2)));
                 }
                 else
                 {
@@ -89,8 +189,9 @@ namespace RLBot.Modules
                 int rp3 = -1;
                 if (season.TryGetValue(RlsPlaylistRanked.Standard, out PlayerRank standard))
                 {
-                    embedBuilder.AddField("3V3", GetRankString(standard.Tier) + $" ({standard.RankPoints})");
+                    embedBuilder.AddField("3V3", GetRankString(standard.Tier) + $" ({standard.RankPoints})", true);
                     rp3 = standard.RankPoints;
+                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Standard, rp3)));
                 }
                 else
                 {
@@ -111,25 +212,21 @@ namespace RLBot.Modules
                 }
 
                 // check if the user has all the required ranks
-                if (rp1 == -1 || rp2 == -1 || rp3 == -1)
+                if (rp1 == -1 && rp2 == -1 && rp3 == -1)
                 {
-                    await ReplyAsync($"{user.Mention}, the accounts can't be linked untill you have received a rank in each of the displayed playlists.");
+                    await ReplyAsync($"{user.Mention}, the accounts can't be linked untill you have received a rank in at least 1 playlist.");
                     return;
                 }
 
                 // prepare the roles for the user
-                IRole[] roles = new IRole[5];
-                roles[0] = Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Duel, rp1));
-                roles[1] = Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Doubles, rp2));
-                roles[2] = Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Standard, rp3));
-                roles[3] = Context.Guild.GetRole(GetRegionRole(region));
-                roles[4] = Context.Guild.GetRole(GetPlatformRole(platform));
+                roles.Add(Context.Guild.GetRole(GetRegionRole(region)));
+                roles.Add(Context.Guild.GetRole(GetPlatformRole(platform)));
 
                 // try to add the user to the database with their current elo
                 await Database.InsertUserInfoAsync(user.Id, uniqueId, rp1, rp2, rp3);
 
                 // give the rolse to the user
-                await (user as SocketGuildUser).AddRolesAsync(roles);
+                await user.AddRolesAsync(roles);
 
                 await ReplyAsync($"Accounts linked succesfull!");
             }

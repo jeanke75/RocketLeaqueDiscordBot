@@ -80,7 +80,7 @@ namespace RLBot.Data
             }
         }
 
-        public static async Task EditUserInfoAsync(ulong userId, int elo1s, int elo2s, int elo3s)
+        public static async Task UpdateUserInfoAsync(ulong userId, int elo1s, int elo2s, int elo3s)
         {
             using (SqlConnection conn = GetSqlConnection())
             {
