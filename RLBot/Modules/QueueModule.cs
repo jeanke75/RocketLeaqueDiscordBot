@@ -682,7 +682,7 @@ namespace RLBot.Modules
         private short CalculateNewElo(short elo, int teamElo, int otherTeamElo, int teamSize, bool win)
         {
             var streakMultiplier = 1; // to do later
-            var x = Math.Round(elo * Math.Pow(otherTeamElo / (double)teamElo, 1) * Math.Pow((teamElo / (double)teamSize) / elo, 3) * streakMultiplier);
+            var x = Math.Round(10 * Math.Pow(otherTeamElo / (double)teamElo, 1) * Math.Pow((teamElo / (double)teamSize) / elo, 3) * streakMultiplier);
             if (x < 4)
                 x = 4;
             else if (x > 36)
