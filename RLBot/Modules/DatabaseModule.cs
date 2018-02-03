@@ -27,21 +27,7 @@ namespace RLBot.Modules
 
             try
             {
-                using (SqlConnection conn = Database.GetSqlConnection())
-                {
-                    await conn.OpenAsync();
-                    using (SqlTransaction tr = conn.BeginTransaction())
-                    {
-                        using (SqlCommand cmd = conn.CreateCommand())
-                        {
-                            cmd.Transaction = tr;
-
-                            cmd.CommandText = command;
-                            await cmd.ExecuteNonQueryAsync();
-                        }
-                        tr.Commit();
-                    }
-                }
+                await Database.RunSQLAsync(command);
                 await ReplyAsync("SQL-command executed.");
             }
             catch (Exception ex)
@@ -57,34 +43,23 @@ namespace RLBot.Modules
         {
             try
             {
-                using (SqlConnection conn = Database.GetSqlConnection())
+                var schema = await Database.DatabaseTablesAsync();
+                string colums = "";
+                foreach (DataColumn column in schema.Columns)
                 {
-                    await conn.OpenAsync();
-                    try
-                    {
-                        DataTable schemaDataTable = conn.GetSchema("Tables");
-                        string colums = "";
-                        foreach (DataColumn column in schemaDataTable.Columns)
-                        {
-                            colums += column.ColumnName + "\t";
-                        }
-                        await ReplyAsync(colums);
-                        foreach (DataRow row in schemaDataTable.Rows)
-                        {
-                            string rows = "";
-                            foreach (object value in row.ItemArray)
-                            {
-                                rows += value.ToString() + "\t";
-                            }
-                            await ReplyAsync(rows);
-                        }
-                        await ReplyAsync("-----done-----");
-                    }
-                    finally
-                    {
-                        conn.Close();
-                    }
+                    colums += column.ColumnName + "\t";
                 }
+                await ReplyAsync(colums);
+                foreach (DataRow row in schema.Rows)
+                {
+                    string rows = "";
+                    foreach (object value in row.ItemArray)
+                    {
+                        rows += value.ToString() + "\t";
+                    }
+                    await ReplyAsync(rows);
+                }
+                await ReplyAsync("-----done-----");
             }
             catch (Exception ex)
             {

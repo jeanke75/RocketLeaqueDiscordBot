@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -11,6 +10,7 @@ using Discord.Commands;
 using Discord.Net;
 using Discord.WebSocket;
 using RLBot.Data;
+using RLBot.Data.Models;
 using RLBot.Models;
 using RLBot.Preconditions;
 
@@ -24,10 +24,6 @@ namespace RLBot.Modules
         private static Random rnd = new Random();
         private readonly string NOT_OPEN = "There is no open queue atm. Type \"" + RLBot.COMMAND_PREFIX + "qopen\", to start a new one.";
         private readonly string NOT_ENOUGH_PLAYERS = "Not enough players have joined the queue yet! {0}/{1}";
-
-        private readonly string DB_QUEUE_SELECT = "SELECT * FROM Queue WHERE QueueID = @QueueID;";
-        private readonly string DB_QUEUE_UPDATE = "UPDATE Queue SET ScoreTeamA = @ScoreTeamA, ScoreTeamB = @ScoreTeamB WHERE QueueID = @QueueID;";
-        private readonly string DB_QUEUE_SUBSTITUTE = "UPDATE QueuePlayer SET UserID = @NewUserID WHERE QueueID = @QueueID AND UserID = @CurrentUserID;";
 
         private readonly OverwritePermissions botPerms = new OverwritePermissions(PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow, PermValue.Allow);
         private readonly OverwritePermissions teamPerms = new OverwritePermissions(PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Allow, PermValue.Deny, PermValue.Deny, PermValue.Deny, PermValue.Allow, PermValue.Deny, PermValue.Deny);
@@ -201,138 +197,80 @@ namespace RLBot.Modules
             385420072996438021, 385393503833948160)]
         public async Task SubstitutePlayerAsync(long queueId, SocketUser subPlayer, SocketUser currentPlayer)
         {
-            if (subPlayer.Id == currentPlayer.Id)
+            try
             {
-                await ReplyAsync("You cannot sub the user for himself!");
-                return;
-            }
-
-            if (subPlayer.IsBot || currentPlayer.IsBot)
-            {
-                await ReplyAsync("You can't sub a bot into a queue!");
-                return;
-            }
-
-            using (SqlConnection conn = Database.GetSqlConnection())
-            {
-                await conn.OpenAsync();
-                using (SqlTransaction tr = conn.BeginTransaction())
+                if (subPlayer.Id == currentPlayer.Id)
                 {
-                    try
+                    await ReplyAsync("You cannot sub the user for himself!");
+                    return;
+                }
+
+                if (subPlayer.IsBot || currentPlayer.IsBot)
+                {
+                    await ReplyAsync("You can't sub a bot into a queue!");
+                    return;
+                }
+
+                // retrieve the queue data if it exists
+                var queue = await Database.GetQueueAsync(queueId);
+                if (queue == null)
+                {
+                    await ReplyAsync($"Didn't find queue {queueId}");
+                    return;
+                }
+
+                // check if queue score is not yet set
+                if (queue.ScoreTeamA != 0 || queue.ScoreTeamB != 0)
+                {
+                    await ReplyAsync($"The score for queue {queueId} has already been submitted, so players can't be substituted anymore");
+                    return;
+                }
+
+                List<QueuePlayer> players = await Database.GetQueuePlayersAsync(queueId);
+                if (players.Count == 0)
+                {
+                    await ReplyAsync($"Failed to retrieve the players from queue {queueId}, please try again.");
+                    return;
+                }
+
+                // check if the player to sub out is in the queue and the player to sub in isn't
+                QueuePlayer currentInQueue = null;
+                foreach (QueuePlayer rec in players)
+                {
+                    if (rec.UserId == currentPlayer.Id)
                     {
-                        bool queueExists = false;
-                        bool scoreAlreadySet = false;
-
-                        // retrieve the queue data if it exists
-                        using (SqlCommand cmd = conn.CreateCommand())
-                        {
-                            cmd.Transaction = tr;
-                            cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
-                            cmd.CommandText = DB_QUEUE_SELECT;
-                            using (SqlDataReader reader = cmd.ExecuteReader())
-                            {
-                                if (reader.HasRows)
-                                {
-                                    await reader.ReadAsync();
-                                    queueExists = true;
-                                    scoreAlreadySet = (byte)reader["ScoreTeamA"] != 0 || (byte)reader["ScoreTeamB"] != 0;
-                                }
-                                reader.Close();
-                            }
-                        }
-
-                        // check if the queue exists
-                        if (!queueExists)
-                        {
-                            await ReplyAsync($"Didn't find queue {queueId}");
-                            return;
-                        }
-
-                        // check if queue score is not yet set
-                        if (scoreAlreadySet)
-                        {
-                            await ReplyAsync($"The score for queue {queueId} has already been submitted, so players can't be substituted anymore");
-                            return;
-                        }
-
-                        // retrieve all the players in the queue
-                        List<QueuePlayerRecord> playersInQueue = new List<QueuePlayerRecord>();
-                        using (SqlCommand cmd = conn.CreateCommand())
-                        {
-                            cmd.Transaction = tr;
-                            cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
-                            cmd.CommandText = "SELECT UserID, Team FROM QueuePlayer WHERE QueueID = @QueueID;";
-                            using (SqlDataReader reader = cmd.ExecuteReader())
-                            {
-                                while (await reader.ReadAsync())
-                                {
-                                    var playerInQueue = new QueuePlayerRecord
-                                    {
-                                        UserId = (ulong)(decimal)reader["UserID"],
-                                        Team = (byte)reader["Team"]
-                                    };
-                                    playersInQueue.Add(playerInQueue);
-                                }
-                                reader.Close();
-                            }
-                        }
-
-                        // check if the player to sub out is in the queue and the player to sub in isn't
-                        QueuePlayerRecord currentInQueue = null;
-                        foreach (QueuePlayerRecord rec in playersInQueue)
-                        {
-                            if (rec.UserId == currentPlayer.Id)
-                            {
-                                currentInQueue = rec;
-                            }
-                            else if (rec.UserId == subPlayer.Id)
-                            {
-                                await ReplyAsync($"The player {subPlayer}, who is to be subbed in is already in queue {queueId}");
-                                return;
-                            }
-                        }
-
-                        if (currentInQueue == null)
-                        {
-                            await ReplyAsync($"The player {currentPlayer}, who is to be subbed out is not in queue {queueId}");
-                            return;
-                        }
-
-
-                        if (Context.Message.Author.Id != RLBot.APPLICATION_OWNER_ID && playersInQueue.SingleOrDefault(x => x.UserId == Context.Message.Author.Id).Team != currentInQueue.Team)
-                        {
-                            await ReplyAsync($"{Context.Message.Author.Mention}, you can only substitue players from your own team!");
-                            return;
-                        }
-
-                        // substitute players
-                        using (SqlCommand cmd = conn.CreateCommand())
-                        {
-                            cmd.Transaction = tr;
-                            cmd.Parameters.AddWithValue("@QueueID", DbType.Decimal).Value = (decimal)queueId;
-                            cmd.Parameters.AddWithValue("@NewUserID", DbType.Decimal).Value = (decimal)subPlayer.Id;
-                            cmd.Parameters.AddWithValue("@CurrentUserID", DbType.Decimal).Value = (decimal)currentPlayer.Id;
-                            cmd.CommandText = DB_QUEUE_SUBSTITUTE;
-                            await cmd.ExecuteNonQueryAsync();
-                        }
-                        tr.Commit();
-
-                        var voiceChannel = Context.Guild.VoiceChannels.SingleOrDefault(x => x.Name.Equals($"Team {(currentInQueue.Team == 0 ? "A" : "B")} #{queueId}"));
-                        await voiceChannel.AddPermissionOverwriteAsync(subPlayer, teamPerms);
-                        await voiceChannel.RemovePermissionOverwriteAsync(currentPlayer);
-
-                        await ReplyAsync($"Queue {queueId}: {subPlayer} substituted {currentPlayer}!");
+                        currentInQueue = rec;
                     }
-                    catch (Exception ex)
+                    else if (rec.UserId == subPlayer.Id)
                     {
-                        await ReplyAsync(ex.Message);
-                        throw ex;
-                    }
-                    finally
-                    {
-                        conn.Close();
+                        await ReplyAsync($"The player {subPlayer}, who is to be subbed in is already in queue {queueId}");
+                        return;
                     }
                 }
+
+                if (currentInQueue == null)
+                {
+                    await ReplyAsync($"The player {currentPlayer}, who is to be subbed out is not in queue {queueId}");
+                    return;
+                }
+
+                if (Context.Message.Author.Id != RLBot.APPLICATION_OWNER_ID && players.SingleOrDefault(x => x.UserId == Context.Message.Author.Id).Team != currentInQueue.Team)
+                {
+                    await ReplyAsync($"{Context.Message.Author.Mention}, you can only substitue players from your own team!");
+                    return;
+                }
+
+                await Database.SubstituteQueuePlayerAsync(queueId, subPlayer.Id, currentPlayer.Id);
+
+                var voiceChannel = Context.Guild.VoiceChannels.SingleOrDefault(x => x.Name.Equals($"Team {(currentInQueue.Team == 0 ? "A" : "B")} #{queueId}"));
+                await voiceChannel.AddPermissionOverwriteAsync(subPlayer, teamPerms);
+                await voiceChannel.RemovePermissionOverwriteAsync(currentPlayer);
+
+                await ReplyAsync($"Queue {queueId}: {subPlayer} substituted {currentPlayer}!");
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync(ex.Message);
             }
         }
         
@@ -366,96 +304,103 @@ namespace RLBot.Modules
             385420072996438021, 385393503833948160)]
         public async Task PickTeamsFromQueueAsync()
         {
-            if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
+            try
             {
-                await ReplyAsync(NOT_OPEN);
-                return;
-            }
-
-            // remove offline users from the queue
-            foreach (SocketUser user in queue.Users.Values)
-                if (user.Status == UserStatus.Offline) queue.Users.TryRemove(user.Id, out SocketUser removedOfflineUser);
-
-            if (queue.Users.Count == queue.GetSize())
-            {
-                string mentions = string.Join(", ", queue.Users.Values.Select(x => x.Mention));
-                var users = queue.Users.Values.ToList();
-
-                List<SocketUser> team_a = new List<SocketUser>();
-                List<SocketUser> team_b = new List<SocketUser>();
-                for (int i = 0; i < queue.GetSize(); i++)
+                if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
                 {
-                    int rng = rnd.Next(0, queue.Users.Count);
-                    var rngUser = users[rng];
-                    if (i % 2 == 0)
-                        team_a.Add(rngUser);
-                    else
-                        team_b.Add(rngUser);
-
-                    users.Remove(rngUser);
-
-                    // remove this user from every queue he might be in
-                    var queuesUserIsIn = queues.Values?.Where(x => x.Users.ContainsKey(rngUser.Id));
-                    foreach (RLQueue joinedQueue in queuesUserIsIn)
-                    {
-                        joinedQueue?.Users.TryRemove(rngUser.Id, out SocketUser removedUser);
-                    }
+                    await ReplyAsync(NOT_OPEN);
+                    return;
                 }
 
-                queues.TryRemove(Context.Channel.Id, out RLQueue removedQueue);
+                // remove offline users from the queue
+                foreach (SocketUser user in queue.Users.Values)
+                    if (user.Status == UserStatus.Offline) queue.Users.TryRemove(user.Id, out SocketUser removedOfflineUser);
 
-                var embedBuilder = new EmbedBuilder()
-                    .WithColor(RLBot.EMBED_COLOR)
-                    .WithTitle($"{queue.Playlist} teams")
-                    .AddField("Team A", $"{string.Join("\n", team_a.Select(x => x.Mention))}", true)
-                    .AddField("Team B", $"{string.Join("\n", team_b.Select(x => x.Mention))}", true)
-                    .AddField("Match host", team_a[0].Mention);
-
-                string matchDetails = $"**__Match details__**\n";
-                if (queue.IsLeaderboardQueue)
+                if (queue.Users.Count == queue.GetSize())
                 {
-                    long queueId = await InsertQueueData(queue.Playlist, team_a, team_b);
+                    string mentions = string.Join(", ", queue.Users.Values.Select(x => x.Mention));
+                    var users = queue.Users.Values.ToList();
 
-                    embedBuilder.AddField("ID", queueId);
-                    embedBuilder.WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult {queueId} <score A> <score B>");
-
-                    await ReplyAsync(mentions, false, embedBuilder.Build());
-
-                    if (queue.Playlist != RLPlaylist.Duel)
+                    List<SocketUser> team_a = new List<SocketUser>();
+                    List<SocketUser> team_b = new List<SocketUser>();
+                    for (int i = 0; i < queue.GetSize(); i++)
                     {
-                        // create voice channels, set player permissions and move the players into the channels
-                        var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
-                        var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
+                        int rng = rnd.Next(0, queue.Users.Count);
+                        var rngUser = users[rng];
+                        if (i % 2 == 0)
+                            team_a.Add(rngUser);
+                        else
+                            team_b.Add(rngUser);
 
-                        await Task.WhenAll(teamA, teamB);
+                        users.Remove(rngUser);
+
+                        // remove this user from every queue he might be in
+                        var queuesUserIsIn = queues.Values?.Where(x => x.Users.ContainsKey(rngUser.Id));
+                        foreach (RLQueue joinedQueue in queuesUserIsIn)
+                        {
+                            joinedQueue?.Users.TryRemove(rngUser.Id, out SocketUser removedUser);
+                        }
                     }
 
-                    matchDetails += $"**ID:** {queueId}\n**Name:** CNQ{queueId}\n";
+                    queues.TryRemove(Context.Channel.Id, out RLQueue removedQueue);
+
+                    var embedBuilder = new EmbedBuilder()
+                        .WithColor(RLBot.EMBED_COLOR)
+                        .WithTitle($"{queue.Playlist} teams")
+                        .AddField("Team A", $"{string.Join("\n", team_a.Select(x => x.Mention))}", true)
+                        .AddField("Team B", $"{string.Join("\n", team_b.Select(x => x.Mention))}", true)
+                        .AddField("Match host", team_a[0].Mention);
+
+                    string matchDetails = $"**__Match details__**\n";
+                    if (queue.IsLeaderboardQueue)
+                    {
+                        long queueId = await Database.InsertQueueAsync(queue.Playlist, team_a, team_b);
+
+                        embedBuilder.AddField("ID", queueId);
+                        embedBuilder.WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult {queueId} <score A> <score B>");
+
+                        await ReplyAsync(mentions, false, embedBuilder.Build());
+
+                        if (queue.Playlist != RLPlaylist.Duel)
+                        {
+                            // create voice channels, set player permissions and move the players into the channels
+                            var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
+                            var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
+
+                            await Task.WhenAll(teamA, teamB);
+                        }
+
+                        matchDetails += $"**ID:** {queueId}\n**Name:** CNQ{queueId}\n";
+                    }
+                    else
+                    {
+                        await ReplyAsync(mentions, false, embedBuilder.Build());
+                        matchDetails += $"**Name:** CNQ{rnd.Next(100, 100000)}\n";
+                    }
+
+                    // DM all the players in the queue the server details
+                    matchDetails += $"**Password:** {GeneratePassword()}";
+                    foreach (SocketUser user in team_a.Union(team_b))
+                    {
+                        try
+                        {
+                            var DMChannel = await user.GetOrCreateDMChannelAsync();
+                            await DMChannel.SendMessageAsync(matchDetails);
+                        }
+                        catch (HttpException ex)
+                        when (ex.DiscordCode == 50007)
+                        {
+                            await ReplyAsync($"{user.Mention}, you are blocking DM's, unable to provide the match details.");
+                        }
+                    }
                 }
                 else
-                {
-                    await ReplyAsync(mentions, false, embedBuilder.Build());
-                    matchDetails += $"**Name:** CNQ{rnd.Next(100, 100000)}\n";
-                }
-
-                // DM all the players in the queue the server details
-                matchDetails += $"**Password:** {GeneratePassword()}";
-                foreach (SocketUser user in team_a.Union(team_b))
-                {
-                    try
-                    {
-                        var DMChannel = await user.GetOrCreateDMChannelAsync();
-                        await DMChannel.SendMessageAsync(matchDetails);
-                    }
-                    catch (HttpException ex)
-                    when (ex.DiscordCode == 50007)
-                    {
-                        await ReplyAsync($"{user.Mention}, you are blocking DM's, unable to provide the match details.");
-                    }
-                }
+                    await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
             }
-            else
-                await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
+            catch (Exception ex)
+            {
+                await ReplyAsync(ex.Message);
+            }
         }
 
         /*
@@ -522,277 +467,155 @@ namespace RLBot.Modules
         [RequireChannel(398133512902934529)]
         public async Task SetResultAsync(long queueId, byte scoreTeamA, byte scoreTeamB)
         {
-            if (scoreTeamA < 0 || scoreTeamB < 0 || scoreTeamA == scoreTeamB)
+            try
             {
-                await ReplyErrorAndDeleteAsync(Context.Message, "Invalid scores.", new TimeSpan(0, 0, 5));
-                return;
+                if (scoreTeamA < 0 || scoreTeamB < 0 || scoreTeamA == scoreTeamB)
+                {
+                    await ReplyErrorAndDeleteAsync(Context.Message, "Invalid scores.", new TimeSpan(0, 0, 5));
+                    return;
+                }
+
+                var queue = await Database.GetQueueAsync(queueId);
+                if (queue == null)
+                {
+                    await ReplyErrorAndDeleteAsync(Context.Message, $"Didn't find queue {queueId}!", new TimeSpan(0, 0, 5));
+                    return;
+                }
+
+                // check if queue score is not yet set
+                if (queue.ScoreTeamA != 0 || queue.ScoreTeamB != 0)
+                {
+                    await ReplyErrorAndDeleteAsync(Context.Message, $"The score for queue {queueId} has already been submitted!", new TimeSpan(0, 0, 5));
+                    return;
+                }
+
+                List<QueuePlayer> players = await Database.GetQueuePlayersAsync(queueId);
+                if (players.Count == 0)
+                {
+                    await ReplyErrorAndDeleteAsync(Context.Message, $"Failed to retrieve the players from queue {queueId}, please try again.", new TimeSpan(0, 0, 5));
+                    return;
+                }
+
+                // check if the author is in the queue
+                if (players.SingleOrDefault(x => x.UserId == Context.Message.Author.Id) == null)
+                {
+                    await ReplyErrorAndDeleteAsync(Context.Message, $"Only players from queue {queueId} can set the score!", new TimeSpan(0, 0, 5));
+                    return;
+                }
+
+                // retrieve the voice channels and all the players from the queue
+                var channels = Context.Guild.VoiceChannels.Where(x => x.Name.Contains($"#{queueId}")).ToArray();
+                var channelUsers = channels.SelectMany(x => x.Users).ToArray();
+
+                // move users back to the general voice channel
+                var usersTasks = new Task[channelUsers.Count()];
+                for (int i = 0; i < usersTasks.Length; i++)
+                {
+                    usersTasks[i] = channelUsers[i].ModifyAsync(x => x.ChannelId = 385131574817062915);
+                }
+
+                await Task.WhenAll(usersTasks);
+
+                // delete the voice channels
+                var channelsTasks = new Task[channels.Count()];
+                for (int i = 0; i < channels.Length; i++)
+                {
+                    channelsTasks[i] = channels[i].DeleteAsync();
+                }
+                await Task.WhenAll(channelsTasks);
+
+                // add reactions to the message so users can select if the result is correct or not
+                var msg = Context.Message;
+                Emoji check = new Emoji("✅");
+                Emoji cancel = new Emoji("❌");
+                await msg.AddReactionAsync(check);
+                await msg.AddReactionAsync(cancel);
+
+                bool success = false;
+                var startTime = DateTime.Now;
+                var votesNeeded = (players.Count / 2) + 1;
+                int checkVotes = 0;
+                int cancelVotes = 0;
+                var playerIds = players.Select(x => x.UserId).ToList();
+                while ((DateTime.Now - startTime).TotalMinutes < 10)
+                {
+                    var checkUsersTask = msg.GetReactionUsersAsync(check);
+                    var cancelUsersTask = msg.GetReactionUsersAsync(cancel);
+                    await Task.WhenAll(checkUsersTask, cancelUsersTask);
+
+                    var checkUsers = await checkUsersTask;
+                    var cancelUsers = await cancelUsersTask;
+
+                    // remove reactions made by users not in the queue and count the votes
+                    List<Task> tasks = new List<Task>();
+                    checkVotes = 0;
+                    foreach (IUser checkUser in checkUsers)
+                    {
+                        if (checkUser.IsBot) continue;
+
+                        if (playerIds.Contains(checkUser.Id))
+                            checkVotes++;
+                        else
+                            tasks.Add(msg.RemoveReactionAsync(check, checkUser));
+                    }
+
+                    cancelVotes = 0;
+                    foreach (IUser cancelUser in cancelUsers)
+                    {
+                        if (cancelUser.IsBot) continue;
+
+                        if (playerIds.Contains(cancelUser.Id))
+                            cancelVotes++;
+                        else
+                            tasks.Add(msg.RemoveReactionAsync(cancel, cancelUser));
+                    }
+
+                    await Task.WhenAll(tasks);
+
+                    // check the votes
+                    if (checkVotes >= votesNeeded)
+                    {
+                        success = true;
+                        break;
+                    }
+                    else if (cancelVotes >= votesNeeded)
+                    {
+                        success = false;
+                        break;
+                    }
+
+                    await Task.Delay(1000);
+                }
+
+                // Check if a majority vote was reached for check or if the check votes were higher then the cancel votes
+                if (success || checkVotes > cancelVotes)
+                {
+                    // calculate new elos
+                    var teamA = players.Where(x => x.Team == 0);
+                    var teamB = players.Where(x => x.Team == 1);
+                    var teamAElo = teamA.Sum(x => x.Elo);
+                    var teamBElo = teamB.Sum(x => x.Elo);
+                    foreach (QueuePlayer player in teamA)
+                    {
+                        player.Elo = CalculateNewElo(player.Elo, teamAElo, teamBElo, teamA.Count(), scoreTeamA > scoreTeamB);
+                    }
+                    foreach (QueuePlayer player in teamB)
+                    {
+                        player.Elo = CalculateNewElo(player.Elo, teamBElo, teamAElo, teamB.Count(), scoreTeamB > scoreTeamA);
+                    }
+
+                    // set the score
+                    await Database.SetQueueResultAsync(queueId, scoreTeamA, scoreTeamB, queue.Playlist, players);
+                    await msg.AddReactionAsync(new Emoji("🆗"));
+
+                    // promote/demote players TODO
+                }
+                else
+                    await msg.DeleteAsync();
             }
-
-            List<ulong> players = new List<ulong>();
-
-            using (SqlConnection conn = Database.GetSqlConnection())
+            catch (Exception ex)
             {
-                await conn.OpenAsync();
-                try
-                {
-                    bool queueExists = false;
-                    bool scoreAlreadySet = false;
-
-                    // retrieve the queue data if it exists
-                    using (SqlCommand cmd = conn.CreateCommand())
-                    {
-                        cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
-                        cmd.CommandText = DB_QUEUE_SELECT;
-                        using (SqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            if (reader.HasRows)
-                            {
-                                await reader.ReadAsync();
-                                queueExists = true;
-                                scoreAlreadySet = (byte)reader["ScoreTeamA"] != 0 || (byte)reader["ScoreTeamB"] != 0;
-                            }
-                            reader.Close();
-                        }
-                    }
-
-                    // check if the queue exists
-                    if (!queueExists)
-                    {
-                        await ReplyErrorAndDeleteAsync(Context.Message, $"Didn't find queue {queueId}!", new TimeSpan(0, 0, 5));
-                        return;
-                    }
-
-                    // check if queue score is not yet set
-                    if (scoreAlreadySet)
-                    {
-                        await ReplyErrorAndDeleteAsync(Context.Message, $"The score for queue {queueId} has already been submitted!", new TimeSpan(0, 0, 5));
-                        return;
-                    }
-
-                    // get players from the queue
-                    using (SqlCommand cmd = conn.CreateCommand())
-                    {
-                        cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
-                        cmd.CommandText = "SELECT UserID FROM QueuePlayer WHERE QueueID = @QueueID;";
-                        using (SqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                players.Add((ulong)(decimal)reader["UserID"]);
-                            }
-                            reader.Close();
-                        }
-                    }
-
-                    if (players.Count == 0)
-                    {
-                        await ReplyErrorAndDeleteAsync(Context.Message, $"Failed to retrieve the players from queue {queueId}, please try again.", new TimeSpan(0, 0, 5));
-                        return;
-                    }
-
-                    // check if the author is in the queue
-                    if (!players.Contains(Context.Message.Author.Id))
-                    {
-                        await ReplyErrorAndDeleteAsync(Context.Message, $"Only players from queue {queueId} can set the score!", new TimeSpan(0, 0, 5));
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ReplyAsync(ex.Message);
-                    throw ex;
-                }
-                finally
-                {
-                    conn.Close();
-                }
-            }
-
-            // retrieve the voice channels and all the players from the queue
-            var channels = Context.Guild.VoiceChannels.Where(x => x.Name.Contains($"#{queueId}")).ToArray();
-            var channelUsers = channels.SelectMany(x => x.Users).ToArray();
-
-            // move users back to the general voice channel
-            var usersTasks = new Task[channelUsers.Count()];
-            for (int i = 0; i < usersTasks.Length; i++)
-            {
-                usersTasks[i] = channelUsers[i].ModifyAsync(x => x.ChannelId = 385131574817062915);
-            }
-
-            await Task.WhenAll(usersTasks);
-
-            // delete the voice channels
-            var channelsTasks = new Task[channels.Count()];
-            for (int i = 0; i < channels.Length; i++)
-            {
-                channelsTasks[i] = channels[i].DeleteAsync();
-            }
-            await Task.WhenAll(channelsTasks);
-
-            // add reactions to the message so users can select if the result is correct or not
-            var msg = Context.Message;
-            Emoji check = new Emoji("✅");
-            Emoji cancel = new Emoji("❌");
-            await msg.AddReactionAsync(check);
-            await msg.AddReactionAsync(cancel);
-
-            bool success = false;
-            var startTime = DateTime.Now;
-            var votesNeeded = (players.Count / 2) + 1;
-            int checkVotes = 0;
-            int cancelVotes = 0;
-            while ((DateTime.Now - startTime).TotalMinutes < 10)
-            {
-                var checkUsersTask = msg.GetReactionUsersAsync(check);
-                var cancelUsersTask = msg.GetReactionUsersAsync(cancel);
-                await Task.WhenAll(checkUsersTask, cancelUsersTask);
-
-                var checkUsers = await checkUsersTask;
-                var cancelUsers = await cancelUsersTask;
-
-                // remove reactions made by users not in the queue and count the votes
-                List<Task> tasks = new List<Task>();
-                checkVotes = 0;
-                foreach (IUser checkUser in checkUsers)
-                {
-                    if (checkUser.IsBot) continue;
-
-                    if (players.Contains(checkUser.Id))
-                        checkVotes++;
-                    else
-                        tasks.Add(msg.RemoveReactionAsync(check, checkUser));
-                }
-
-                cancelVotes = 0;
-                foreach (IUser cancelUser in cancelUsers)
-                {
-                    if (cancelUser.IsBot) continue;
-
-                    if (players.Contains(cancelUser.Id))
-                        cancelVotes++;
-                    else
-                        tasks.Add(msg.RemoveReactionAsync(cancel, cancelUser));
-                }
-
-                await Task.WhenAll(tasks);
-
-                // check the votes
-                if (checkVotes >= votesNeeded)
-                {
-                    success = true;
-                    break;
-                }
-                else if (cancelVotes >= votesNeeded)
-                {
-                    success = false;
-                    break;
-                }
-
-                await Task.Delay(1000);
-            }
-
-            // Check if a majority vote was reached for check or if the check votes were higher then the cancel votes
-            if (success || checkVotes > cancelVotes)
-            {
-                using (SqlConnection conn = Database.GetSqlConnection())
-                {
-                    await conn.OpenAsync();
-                    using (SqlTransaction tr = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            // set the score
-                            using (SqlCommand cmd = conn.CreateCommand())
-                            {
-                                cmd.Transaction = tr;
-                                cmd.Parameters.AddWithValue("@QueueID", DbType.Decimal).Value = (decimal)queueId;
-                                cmd.Parameters.AddWithValue("@ScoreTeamA", DbType.Byte).Value = scoreTeamA;
-                                cmd.Parameters.AddWithValue("@ScoreTeamB", DbType.Byte).Value = scoreTeamB;
-                                cmd.CommandText = DB_QUEUE_UPDATE;
-                                await cmd.ExecuteNonQueryAsync();
-                            }
-                            tr.Commit();
-
-                            await msg.AddReactionAsync(new Emoji("🆗"));
-                        }
-                        catch (Exception ex)
-                        {
-                            tr.Rollback();
-                            await ReplyAsync(ex.Message);
-                            throw ex;
-                        }
-                        finally
-                        {
-                            conn.Close();
-                        }
-                    }
-                }
-            }
-            else
-                await msg.DeleteAsync();
-        }
-
-        private async Task<long> InsertQueueData(RLPlaylist type, List<SocketUser> team_a, List<SocketUser> team_b)
-        {
-            long queueId = -1;
-            using (SqlConnection conn = Database.GetSqlConnection())
-            {
-                await conn.OpenAsync();
-                using (SqlTransaction tr = conn.BeginTransaction())
-                {
-                    try
-                    {
-                        using (SqlCommand cmd = conn.CreateCommand())
-                        {
-                            cmd.Transaction = tr;
-                            cmd.Parameters.AddWithValue("@Type", DbType.Byte).Value = (byte)type;
-                            cmd.CommandText = "INSERT INTO Queue(ScoreTeamA, ScoreTeamB, Created, Playlist) OUTPUT INSERTED.QueueID VALUES(0, 0, GETDATE(), @Type);";
-                            var res = await cmd.ExecuteScalarAsync();
-                            queueId = (long)res;
-                        }
-
-                        var tasks = new Task[team_a.Count + team_b.Count];
-                        int i = 0;
-                        foreach(SocketUser user in team_a)
-                        {
-                            tasks[i] = InsertQueuePlayer(conn, tr, queueId, user.Id, 0);
-                            i++;
-                        }
-                        foreach (SocketUser user in team_b)
-                        {
-                            tasks[i] = InsertQueuePlayer(conn, tr, queueId, user.Id, 1);
-                            i++;
-                        }
-
-                        await Task.WhenAll(tasks);
-
-                        tr.Commit();
-                    }
-                    catch (Exception ex)
-                    {
-                        tr.Rollback();
-                        await ReplyAsync(ex.Message);                        
-                        throw ex;
-                    }
-                    finally
-                    {
-                        conn.Close();
-                    }
-                }
-            }
-            return queueId;
-        }
-
-        private async Task InsertQueuePlayer(SqlConnection conn, SqlTransaction tr, long queueId, ulong userId, byte team)
-        {
-            using (SqlCommand cmd = conn.CreateCommand())
-            {
-                cmd.Transaction = tr;
-                cmd.Parameters.AddWithValue("@QueueID", DbType.Int64).Value = queueId;
-                cmd.Parameters.AddWithValue("@UserID", DbType.Decimal).Value = (decimal)userId;
-                cmd.Parameters.AddWithValue("@Team", DbType.Byte).Value = team;
-                cmd.CommandText = "INSERT INTO QueuePlayer(QueueId, UserID, Team) VALUES(@QueueId, @UserID, @Team);";
-                await cmd.ExecuteNonQueryAsync();
+                await ReplyAsync(ex.Message);
             }
         }
 
@@ -854,6 +677,23 @@ namespace RLBot.Modules
 
             await ReplyAndDeleteAsync(message, timeout: timeout).ConfigureAwait(false);
             await Task.Delay(timeout).ContinueWith(async _ => await messageToDelete.DeleteAsync().ConfigureAwait(false)).ConfigureAwait(false);
+        }
+
+        private short CalculateNewElo(short elo, int teamElo, int otherTeamElo, int teamSize, bool win)
+        {
+            var streakMultiplier = 1; // to do later
+            var x = Math.Round(elo * Math.Pow(otherTeamElo / (double)teamElo, 1) * Math.Pow((teamElo / (double)teamSize) / elo, 3) * streakMultiplier);
+            if (x < 4)
+                x = 4;
+            else if (x > 36)
+                x = 36;
+
+            short newElo = (short)(win ? elo + x : elo - x);
+
+            if (newElo < 0)
+                newElo = 0;
+            
+            return newElo;
         }
     }
 }

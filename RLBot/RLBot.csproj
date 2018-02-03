@@ -216,11 +216,13 @@
     <Compile Include="API\RLS\RlsClient.cs" />
     <Compile Include="API\RLS\Util\TimeUtil.cs" />
     <Compile Include="Data\Database.cs" />
+    <Compile Include="Data\Models\Queue.cs" />
     <Compile Include="Data\Models\UserInfo.cs" />
+    <Compile Include="Models\RLPlaylist.cs" />
     <Compile Include="Preconditions\RequireChannelAtribute.cs" />
     <Compile Include="Services\ReliabilityService.cs" />
-    <Compile Include="Models\LeaderboardRecord.cs" />
-    <Compile Include="Models\QueuePlayerRecord.cs" />
+    <Compile Include="Data\Models\Leaderboard.cs" />
+    <Compile Include="Data\Models\QueuePlayer.cs" />
     <Compile Include="Models\RLQueue.cs" />
     <Compile Include="Modules\DatabaseModule.cs" />
     <Compile Include="Modules\HelpModule.cs" />

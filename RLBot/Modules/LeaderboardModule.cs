@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using RLBot.Data;
+using RLBot.Data.Models;
 using RLBot.Models;
 using RLBot.Preconditions;
 using RLBot.TypeReaders;
@@ -23,8 +24,8 @@ namespace RLBot.Modules
             await Context.Channel.TriggerTypingAsync();
             var userInfo = user ?? Context.Message.Author;
 
-            LeaderboardRecord recordTotal = null;
-            LeaderboardRecord recordMonthly = null; 
+            Leaderboard recordTotal = null;
+            Leaderboard recordMonthly = null; 
             
             using (SqlConnection conn = Database.GetSqlConnection())
             {
@@ -67,8 +68,8 @@ namespace RLBot.Modules
         public async Task Top5Async([OverrideTypeReader(typeof(RLPlaylistTypeReader))] RLPlaylist playlist)
         {
             await Context.Channel.TriggerTypingAsync();
-            LeaderboardRecord[] monthlyTop5 = null;
-            LeaderboardRecord[] allTimeTop5 = null;
+            Leaderboard[] monthlyTop5 = null;
+            Leaderboard[] allTimeTop5 = null;
             using (SqlConnection conn = Database.GetSqlConnection())
             {
                 await conn.OpenAsync();
@@ -104,7 +105,7 @@ namespace RLBot.Modules
                 await ReplyAsync("No leaderboard data found.");
         }
 
-        private void EmbedWithTop5(EmbedBuilder builder, string title, LeaderboardRecord[] top5)
+        private void EmbedWithTop5(EmbedBuilder builder, string title, Leaderboard[] top5)
         {
             if (top5 == null || top5.Length == 0) return;
 

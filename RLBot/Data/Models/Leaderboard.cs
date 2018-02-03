@@ -1,6 +1,6 @@
-﻿namespace RLBot.Models
+﻿namespace RLBot.Data.Models
 {
-    public class LeaderboardRecord
+    public class Leaderboard
     {
         public ulong UserID;
         public long Rank;

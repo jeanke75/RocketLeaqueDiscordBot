@@ -110,7 +110,7 @@ namespace RLBot.Modules
                 }
 
                 // try to add the user to the database with their current elo
-                await Database.UpdateUserInfoAsync(user.Id, rp1, rp2, rp3);
+                await Database.UpdateUserInfoAsync(user.Id, (short)rp1, (short)rp2, (short)rp3);
 
                 // give the rolse to the user
                 await user.AddRolesAsync(roles);
@@ -223,7 +223,7 @@ namespace RLBot.Modules
                 roles.Add(Context.Guild.GetRole(GetPlatformRole(platform)));
 
                 // try to add the user to the database with their current elo
-                await Database.InsertUserInfoAsync(user.Id, uniqueId, rp1, rp2, rp3);
+                await Database.InsertUserInfoAsync(user.Id, uniqueId, (short)rp1, (short)rp2, (short)rp3);
 
                 // give the rolse to the user
                 await user.AddRolesAsync(roles);
