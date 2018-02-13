@@ -34,9 +34,10 @@ namespace RLBot.Modules
         [Summary("Create a new queue from which two 3man teams will be picked")]
         [Remarks("qopen")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
-            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
-            385420072996438021, 385393503833948160)]
+        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
+            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
+            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
+            385393503833948160, 412888426837180418)]
         public async Task OpenQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -68,6 +69,9 @@ namespace RLBot.Modules
                             case 393694545688133634: // Rank-W
                                 queue = RLQueue.DuelQueue(channel, true);
                                 break;
+                            case 412888290027634688: // Unranked
+                                queue = RLQueue.DuelQueue(channel, false);
+                                break;
                             case 393695480946622465: // 2v2 Rank-A
                             case 393695741941514240: // Rank-Z
                             case 393695923026526208: // Rank-Y
@@ -75,12 +79,18 @@ namespace RLBot.Modules
                             case 393696168300773386: // Rank-W
                                 queue = RLQueue.DoublesQueue(channel, true);
                                 break;
+                            case 412888411855388672: // Unranked
+                                queue = RLQueue.DoublesQueue(channel, false);
+                                break;
                             case 386213046672162838: // 3v3 Rank-A
                             case 375039923603898369: // Rank-Z
                             case 385070323449462785: // Rank-Y
                             case 385420072996438021: // Rank-X
                             case 385393503833948160: // Rank-W
                                 queue = RLQueue.StandardQueue(channel, true);
+                                break;
+                            case 412888426837180418: // Unranked
+                                queue = RLQueue.StandardQueue(channel, false);
                                 break;
                         }
                         break;
@@ -109,9 +119,10 @@ namespace RLBot.Modules
         [Summary("Join the queue for 6man games")]
         [Remarks("qjoin")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
-            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
-            385420072996438021, 385393503833948160)]
+        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
+            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
+            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
+            385393503833948160, 412888426837180418)]
         public async Task JoinQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -141,9 +152,10 @@ namespace RLBot.Modules
         [Summary("Leave the queue for 6man games")]
         [Remarks("qleave")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
-            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
-            385420072996438021, 385393503833948160)]
+        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
+            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
+            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
+            385393503833948160, 412888426837180418)]
         public async Task LeaveQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -163,9 +175,10 @@ namespace RLBot.Modules
         [Summary("Show a list of all the people in the queue")]
         [Remarks("qstatus")]
         [RequireBotPermission(GuildPermission.EmbedLinks)]
-        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
-            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
-            385420072996438021, 385393503833948160)]
+        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
+            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
+            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
+            385393503833948160, 412888426837180418)]
         public async Task ListOfPlayersInQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -192,9 +205,10 @@ namespace RLBot.Modules
         [Summary("Substitue one player for another in a queue")]
         [Remarks("qsub <queue ID> <@substitute> <@current player>")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
-            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
-            385420072996438021, 385393503833948160)]
+        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
+            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
+            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
+            385393503833948160, 412888426837180418)]
         public async Task SubstitutePlayerAsync(long queueId, SocketUser subPlayer, SocketUser currentPlayer)
         {
             try
@@ -279,9 +293,10 @@ namespace RLBot.Modules
         [Summary("Removes the current queue")]
         [Remarks("qreset")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
-            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
-            385420072996438021, 385393503833948160)]
+        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
+            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
+            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
+            385393503833948160, 412888426837180418)]
         public async Task ResetQueueAsync()
         {
             if (!queues.TryRemove(Context.Channel.Id, out RLQueue queue))
@@ -299,9 +314,10 @@ namespace RLBot.Modules
         [Summary("Randomly divide the players into 2 even teams")]
         [Remarks("qpick")]
         [RequireBotPermission(GuildPermission.ManageChannels | GuildPermission.MoveMembers | GuildPermission.EmbedLinks)]
-        [RequireChannel(393411399654703115, 393411426451980289, 384666738056232970, 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634,
-            393695480946622465, 393695741941514240, 393695923026526208, 393696051607109632, 393696168300773386, 386213046672162838, 375039923603898369, 385070323449462785,
-            385420072996438021, 385393503833948160)]
+        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
+            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
+            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
+            385393503833948160, 412888426837180418)]
         public async Task PickTeamsFromQueueAsync()
         {
             try
@@ -608,7 +624,26 @@ namespace RLBot.Modules
                     await Database.SetQueueResultAsync(queueId, scoreTeamA, scoreTeamB, queue.Playlist, players);
                     await msg.AddReactionAsync(new Emoji("🆗"));
 
-                    // promote/demote players TODO
+                    // update roles in case of a promotion/demotion
+                    var playlistRanks = Global.GetRanks(queue.Playlist);
+                    HashSet<ulong> rankRoleIds = new HashSet<ulong>(playlistRanks.Select(r => r.RoleID));
+                    foreach (QueuePlayer player in players)
+                    {
+                        var newRank = Global.GetRank(queue.Playlist, player.Elo);
+                        var user = Context.Guild.GetUser(player.UserId);
+
+                        // give the new role to the user
+                        if (!user.Roles.Select(x => x.Id).Contains(newRank.RoleID))
+                        {
+                            var newRole = Context.Guild.GetRole(newRank.RoleID);
+                            await user.AddRoleAsync(newRole);
+                        }
+
+                        //remove any of the other roles the user might have that are below or above his rank
+                        var rolesToRemove = user.Roles.Where(x => rankRoleIds.Contains(x.Id) && x.Id != newRank?.RoleID).ToList();
+                        if (rolesToRemove.Count() > 0)
+                            await user.RemoveRolesAsync(rolesToRemove);
+                    }
                 }
                 else
                     await msg.DeleteAsync();

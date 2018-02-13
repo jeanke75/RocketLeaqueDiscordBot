@@ -8,23 +8,24 @@ using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
-using RLBot.API.RLS;
-using RLBot.API.RLS.Data;
-using RLBot.API.RLS.Net.Models;
 using RLBot.Data;
+using RLBot.Models;
 using RLBot.Preconditions;
 using RLBot.TypeReaders;
+using RLSApi;
+using RLSApi.Data;
+using RLSApi.Net.Models;
 
 namespace RLBot.Modules
 {
     [Name("Set Up")]
     [Summary("This is where you get started")]
-    public class SetUpModule : InteractiveBase<SocketCommandContext>
+    public class SetUpModule : InteractiveBase<SocketCommandContext>, IDisposable
     {
-        private RlsClient _RLSClient;
+        private RLSClient _RLSClient;
         public SetUpModule()
         {
-            _RLSClient = new RlsClient(ConfigurationManager.AppSettings["RLSAPI_TOKEN"]);
+            _RLSClient = new RLSClient(ConfigurationManager.AppSettings["RLSAPI_TOKEN"]);
         }
         
         [Command("link", RunMode = RunMode.Async)]
@@ -86,21 +87,21 @@ namespace RLBot.Modules
                 if (rp1 == -1 && season.TryGetValue(RlsPlaylistRanked.Duel, out PlayerRank duel))
                 {
                     rp1 = duel.RankPoints;
-                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Duel, duel.RankPoints)));
+                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Duel, duel.RankPoints).RoleID));
                 }
 
                 int rp2 = userinfo.Elo2s;
                 if (rp2 == -1 && season.TryGetValue(RlsPlaylistRanked.Doubles, out PlayerRank doubles))
                 {
                     rp2 = doubles.RankPoints;
-                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Doubles, doubles.RankPoints)));
+                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Doubles, doubles.RankPoints).RoleID));
                 }
 
                 int rp3 = userinfo.Elo3s;
                 if (rp3 == -1 && season.TryGetValue(RlsPlaylistRanked.Standard, out PlayerRank standard))
                 {
                     rp3 = standard.RankPoints;
-                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Standard, rp3)));
+                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Standard, standard.RankPoints).RoleID));
                 }
 
                 if (rp1 == userinfo.Elo1s && rp2 == userinfo.Elo2s && rp3 == userinfo.Elo3s)
@@ -128,7 +129,7 @@ namespace RLBot.Modules
         [Remarks("link <region> <platform> <account ID>")]
         [RequireBotPermission(GuildPermission.EmbedLinks | GuildPermission.ManageRoles)]
         [RequireChannel(385503590619545611)]
-        public async Task LinkAsync([OverrideTypeReader(typeof(RLRegionTypeReader))] RlsRegion region, [OverrideTypeReader(typeof(RLPlatformTypeReader))] RlsPlatform platform, [Remainder]string uniqueId)
+        public async Task LinkAsync([OverrideTypeReader(typeof(RLRegionTypeReader))] RLRegion region, [OverrideTypeReader(typeof(RLPlatformTypeReader))] RlsPlatform platform, [Remainder]string uniqueId)
         {
             await Context.Channel.TriggerTypingAsync();
             var user = Context.Message.Author as SocketGuildUser;
@@ -163,11 +164,11 @@ namespace RLBot.Modules
 
                 List<IRole> roles = new List<IRole>();
                 int rp1 = -1;
-                if (season.TryGetValue(RlsPlaylistRanked.Duel, out PlayerRank duels))
+                if (season.TryGetValue(RlsPlaylistRanked.Duel, out PlayerRank duel))
                 {
-                    embedBuilder.AddField("1V1", GetRankString(duels.Tier) + $" ({duels.RankPoints})", true);
-                    rp1 = duels.RankPoints;
-                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Duel, rp1)));
+                    embedBuilder.AddField("1V1", GetRankString(duel.Tier) + $" ({duel.RankPoints})", true);
+                    rp1 = duel.RankPoints;
+                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Duel, duel.RankPoints).RoleID));
                 }
                 else
                 {
@@ -179,7 +180,7 @@ namespace RLBot.Modules
                 {
                     embedBuilder.AddField("2V2", GetRankString(doubles.Tier) + $" ({doubles.RankPoints})", true);
                     rp2 = doubles.RankPoints;
-                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Doubles, rp2)));
+                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Doubles, doubles.RankPoints).RoleID));
                 }
                 else
                 {
@@ -191,7 +192,7 @@ namespace RLBot.Modules
                 {
                     embedBuilder.AddField("3V3", GetRankString(standard.Tier) + $" ({standard.RankPoints})", true);
                     rp3 = standard.RankPoints;
-                    roles.Add(Context.Guild.GetRole(GetPlaylistRole(RlsPlaylistRanked.Standard, rp3)));
+                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Standard, standard.RankPoints).RoleID));
                 }
                 else
                 {
@@ -288,65 +289,23 @@ namespace RLBot.Modules
             }
         }
 
-        private ulong GetPlaylistRole(RlsPlaylistRanked playlist, int points)
-        {
-            switch(playlist)
-            {
-                case RlsPlaylistRanked.Duel:
-                    if (points > 1400)
-                        return 407225051968962590;
-                    else if (points > 1308)
-                        return 407225054590664729;
-                    else if (points > 1155)
-                        return 407225057677410304;
-                    else if (points > 915)
-                        return 407225059963568139;
-                    else
-                        return 407225064602468353;
-                case RlsPlaylistRanked.Doubles:
-                    if (points > 1550)
-                        return 407224039363444736;
-                    else if (points > 1395)
-                        return 407224239079424031;
-                    else if (points > 1195)
-                        return 407224549801984001;
-                    else if (points > 935)
-                        return 407224673001275392;
-                    else
-                        return 407224786956189696;
-                case RlsPlaylistRanked.Standard:
-                    if (points > 1550)
-                        return 386211454040276992;
-                    else if (points > 1395)
-                        return 373857123110617099;
-                    else if (points > 1195)
-                        return 375035896753553409;
-                    else if (points > 935)
-                        return 375020227328475138;
-                    else
-                        return 373857511146782721;
-            }
-
-            throw new ArgumentException("Invalid playlist.");
-        }
-
-        private ulong GetRegionRole(RlsRegion region)
+        private ulong GetRegionRole(RLRegion region)
         {
             switch (region)
             {
-                case RlsRegion.Europe:
+                case RLRegion.Europe:
                     return 385785137960452106;
-                case RlsRegion.NorthAmerica:
+                case RLRegion.NorthAmerica:
                     return 385780548016013312;
-                case RlsRegion.SouthAmerica:
+                case RLRegion.SouthAmerica:
                     return 407255951406530561;
-                case RlsRegion.Oceania:
+                case RLRegion.Oceania:
                     return 407256306190385175;
-                case RlsRegion.AsiaCentral:
+                case RLRegion.AsiaCentral:
                     return 407256310435020813;
-                case RlsRegion.MiddleEast:
+                case RLRegion.MiddleEast:
                     return 407256685074317322;
-                case RlsRegion.Africa:
+                case RLRegion.Africa:
                     return 407256688610246660;
             }
 
@@ -366,6 +325,11 @@ namespace RLBot.Modules
             }
 
             throw new ArgumentException("Invalid platform.");
+        }
+
+        public void Dispose()
+        {
+            _RLSClient.Dispose();
         }
     }
 }

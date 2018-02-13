@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Discord.Commands;
-using RLBot.API.RLS.Data;
+using RLSApi.Data;
 
 namespace RLBot.TypeReaders
 {

@@ -81,7 +81,11 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="RLSApi, Version=1.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\RLSApi.1.4.0\lib\net45\RLSApi.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -193,32 +197,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="API\RLS\Data\RlsPlatform.cs" />
-    <Compile Include="API\RLS\Data\RlsPlaylist.cs" />
-    <Compile Include="API\RLS\Data\RlsPlaylistRanked.cs" />
-    <Compile Include="API\RLS\Data\RlsRegion.cs" />
-    <Compile Include="API\RLS\Data\RlsSeason.cs" />
-    <Compile Include="API\RLS\Data\RlsStatType.cs" />
-    <Compile Include="API\RLS\Exceptions\RlsApiException.cs" />
-    <Compile Include="API\RLS\Net\ApiRequester.cs" />
-    <Compile Include="API\RLS\Net\ApiRequesterThrottle.cs" />
-    <Compile Include="API\RLS\Net\Models\Error.cs" />
-    <Compile Include="API\RLS\Net\Models\Platform.cs" />
-    <Compile Include="API\RLS\Net\Models\Player.cs" />
-    <Compile Include="API\RLS\Net\Models\PlayerRank.cs" />
-    <Compile Include="API\RLS\Net\Models\PlayerSearchPage.cs" />
-    <Compile Include="API\RLS\Net\Models\PlayerStats.cs" />
-    <Compile Include="API\RLS\Net\Models\Playlist.cs" />
-    <Compile Include="API\RLS\Net\Models\PlaylistPopulation.cs" />
-    <Compile Include="API\RLS\Net\Models\Season.cs" />
-    <Compile Include="API\RLS\Net\Models\Tier.cs" />
-    <Compile Include="API\RLS\Net\Requests\PlayerBatchRequest.cs" />
-    <Compile Include="API\RLS\RlsClient.cs" />
-    <Compile Include="API\RLS\Util\TimeUtil.cs" />
     <Compile Include="Data\Database.cs" />
+    <Compile Include="Data\Global.cs" />
     <Compile Include="Data\Models\Queue.cs" />
     <Compile Include="Data\Models\UserInfo.cs" />
     <Compile Include="Models\RLPlaylist.cs" />
+    <Compile Include="Models\RLRank.cs" />
+    <Compile Include="Models\RLRegion.cs" />
     <Compile Include="Preconditions\RequireChannelAtribute.cs" />
     <Compile Include="Services\ReliabilityService.cs" />
     <Compile Include="Data\Models\Leaderboard.cs" />

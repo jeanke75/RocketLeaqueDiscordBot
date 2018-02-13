@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Discord.Commands;
-using RLBot.API.RLS.Data;
+using RLBot.Models;
 
 namespace RLBot.TypeReaders
 {
@@ -14,28 +14,28 @@ namespace RLBot.TypeReaders
             {
                 case "eu":
                 case "europe":
-                    return Task.FromResult(TypeReaderResult.FromSuccess(RlsRegion.Europe));
+                    return Task.FromResult(TypeReaderResult.FromSuccess(RLRegion.Europe));
                 case "na":
                 case "northamerica":
-                    return Task.FromResult(TypeReaderResult.FromSuccess(RlsRegion.NorthAmerica));
+                    return Task.FromResult(TypeReaderResult.FromSuccess(RLRegion.NorthAmerica));
                 case "sa":
                 case "southamerica":
-                    return Task.FromResult(TypeReaderResult.FromSuccess(RlsRegion.SouthAmerica));
+                    return Task.FromResult(TypeReaderResult.FromSuccess(RLRegion.SouthAmerica));
                 case "oc":
                 case "oceania":
-                    return Task.FromResult(TypeReaderResult.FromSuccess(RlsRegion.Oceania));
+                    return Task.FromResult(TypeReaderResult.FromSuccess(RLRegion.Oceania));
                 case "ac":
                 case "asiacentral":
-                    return Task.FromResult(TypeReaderResult.FromSuccess(RlsRegion.AsiaCentral));
+                    return Task.FromResult(TypeReaderResult.FromSuccess(RLRegion.AsiaCentral));
                 case "me":
                 case "middleeast":
-                    return Task.FromResult(TypeReaderResult.FromSuccess(RlsRegion.MiddleEast));
+                    return Task.FromResult(TypeReaderResult.FromSuccess(RLRegion.MiddleEast));
                 case "af":
                 case "africa":
-                    return Task.FromResult(TypeReaderResult.FromSuccess(RlsRegion.Africa));
+                    return Task.FromResult(TypeReaderResult.FromSuccess(RLRegion.Africa));
             }
 
-            return Task.FromResult(TypeReaderResult.FromError(CommandError.ParseFailed, $"Not a valid region. {string.Join(", ", Enum.GetValues(typeof(RlsRegion)).Cast<RlsRegion>())}"));
+            return Task.FromResult(TypeReaderResult.FromError(CommandError.ParseFailed, $"Not a valid region. {string.Join(", ", Enum.GetValues(typeof(RLRegion)).Cast<RLRegion>())}"));
         }
     }
 }

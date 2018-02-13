@@ -1,6 +1,6 @@
-﻿namespace RLBot.API.RLS.Data
+﻿namespace RLBot.Models
 {
-    public enum RlsRegion
+    public enum RLRegion
     {
         Europe,
         NorthAmerica,

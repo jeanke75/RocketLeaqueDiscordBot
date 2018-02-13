@@ -7,7 +7,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using RLBot.API.RLS.Data;
 using RLBot.Models;
 using RLBot.Services;
 using RLBot.TypeReaders;
@@ -34,7 +33,7 @@ namespace RLBot
             _commands = new CommandService();
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
             _commands.AddTypeReader<RLPlaylist>(new RLPlatformTypeReader());
-            _commands.AddTypeReader<RlsRegion>(new RLRegionTypeReader());
+            _commands.AddTypeReader<RLRegion>(new RLRegionTypeReader());
             _commands.AddTypeReader<RLPlaylist>(new RLPlaylistTypeReader());
             
             var serv = InstallServices();
