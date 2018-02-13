@@ -39,6 +39,7 @@ namespace RLBot
             var serv = InstallServices();
             serv.GetRequiredService<ReliabilityService>();
             serv.GetRequiredService<CommandHandlerService>();
+            serv.GetRequiredService<InviteService>();
 
             _client.Log += Log;
             _commands.Log += Log;
@@ -59,6 +60,7 @@ namespace RLBot
                 .AddSingleton<ReliabilityService>()
                 .AddSingleton<CommandHandlerService>()
                 .AddSingleton<InteractiveService>()
+                .AddSingleton<InviteService>()
                 .BuildServiceProvider();
         }
 

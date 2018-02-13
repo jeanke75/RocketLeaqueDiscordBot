@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
@@ -154,6 +156,99 @@ namespace RLBot.Data
                 }
 
                 await cmd.ExecuteNonQueryAsync();
+            }
+        }
+        #endregion
+
+        #region Invites
+        public static async Task<int> GetInviteCountAsync(ulong userId)
+        {
+            int result = 0;
+            using (SqlConnection conn = GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                try
+                {
+                    using (SqlCommand cmd = conn.CreateCommand())
+                    {
+                        cmd.Parameters.AddWithValue("@ReferrerID", DbType.Decimal).Value = (decimal)userId;
+                        cmd.CommandText = "SELECT COUNT(1) as Count FROM Invites WHERE ReferrerID = @ReferrerID GROUP BY ReferrerID";
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.HasRows)
+                            {
+                                await reader.ReadAsync();
+                                result = (int)reader["Count"];
+                            }
+                            reader.Close();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+            return result;
+        }
+
+        public static async Task InsertInviteAsync(ulong newUserId, ulong referrerId)
+        {
+            if (newUserId == referrerId) return;
+
+            using (SqlConnection conn = GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                try
+                {
+                    using (SqlCommand cmd = conn.CreateCommand())
+                    {
+                        cmd.Parameters.AddWithValue("@NewUserID", DbType.Decimal).Value = (decimal)newUserId;
+                        cmd.Parameters.AddWithValue("@ReferrerID", DbType.Decimal).Value = (decimal)referrerId;
+                        cmd.CommandText = "INSERT INTO Invites(UserID, ReferrerID, JoinDate) VALUES(@NewUserID, @ReferrerID, GETDATE())";
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                catch (DbException ex)
+                when (ex.HResult == -2146232060)
+                {
+                    // when it's a primary key violation do nothing
+                }
+            }
+        }
+
+        public static async Task InsertInvitesAsync(ConcurrentQueue<Invite> invites)
+        {
+            DateTime startTime = DateTime.Now;
+            using (SqlConnection conn = GetSqlConnection())
+            {
+                await conn.OpenAsync();
+                while (invites.TryPeek(out Invite invite) && invite.JoinDate <= startTime)
+                {
+                    try
+                    {
+                        using (SqlCommand cmd = conn.CreateCommand())
+                        {
+                            cmd.Parameters.AddWithValue("@NewUserID", DbType.Decimal).Value = (decimal)invite.UserId;
+                            cmd.Parameters.AddWithValue("@ReferrerID", DbType.Decimal).Value = (decimal)invite.ReferrerId;
+                            cmd.Parameters.AddWithValue("@JoinDate", DbType.DateTime).Value = invite.JoinDate;
+                            cmd.CommandText = "INSERT INTO Invites(UserID, ReferrerID, JoinDate) VALUES(@NewUserID, @ReferrerID, @JoinDate)";
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                    catch (DbException ex)
+                    when (ex.HResult == -2146232060)
+                    {
+                        // when it's a primary key violation do nothing
+                    }
+
+                    // remove the invite from the list
+                    invites.TryDequeue(out Invite removedInvite);
+                }
             }
         }
         #endregion

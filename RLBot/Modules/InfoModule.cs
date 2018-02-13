@@ -27,7 +27,7 @@ namespace RLBot.Modules
             var voicePermissions = GuildPermission.MoveMembers;
             var requiredPermissions = (int)(generalPermissions | textPermissions | voicePermissions);
 
-            await ReplyAsync($"A user with `MANAGE_SERVER` can invite me to your server here: <https://discordapp.com/oauth2/authorize?client_id={application.Id}&scope=bot&permissions={requiredPermissions}>");
+            await ReplyAsync($"<https://discordapp.com/oauth2/authorize?client_id={application.Id}&scope=bot&permissions={requiredPermissions}>");
         }
 
         [Command("ping", RunMode = RunMode.Async)]
