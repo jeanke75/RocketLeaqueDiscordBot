@@ -11,6 +11,7 @@ using Discord.Net;
 using Discord.WebSocket;
 using RLBot.Data;
 using RLBot.Data.Models;
+using RLBot.Exceptions;
 using RLBot.Models;
 using RLBot.Preconditions;
 
@@ -34,75 +35,30 @@ namespace RLBot.Modules
         [Summary("Create a new queue from which two 3man teams will be picked")]
         [Remarks("qopen")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
-            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
-            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
-            385393503833948160, 412888426837180418)]
+        [RequireChannel("1v1", "2v2", "3v3")]
         public async Task OpenQueueAsync()
         {
+            var author = Context.Message.Author as SocketGuildUser;
+
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
             {
                 var channel = Context.Channel as SocketGuildChannel;
-                switch (Context.Guild.Id)
+                bool ranked = Global.GetChannelRankRequirement(channel.Id) != null;
+
+                switch (Context.Channel.Name.ToLower())
                 {
-                    case 384640081660739594: // test server
-                        switch (channel.Id)
-                        {
-                            case 393411399654703115: // 1v1
-                                queue = RLQueue.DuelQueue(channel, false);
-                                break;
-                            case 393411426451980289: // 2v2
-                                queue = RLQueue.DoublesQueue(channel, false);
-                                break;
-                            case 384666738056232970: // 3v3
-                                queue = RLQueue.StandardQueue(channel, false);
-                                break;
-                        }
+                    case "1v1":
+                        queue = RLQueue.DuelQueue(channel, ranked);
                         break;
-                    case 373829959187169280: // live server
-                        switch (channel.Id)
-                        {
-                            case 393692333469597696: // 1v1 Rank-A
-                            case 393693176772296704: // Rank-Z
-                            case 393693726565728257: // Rank-Y
-                            case 393693993050832896: // Rank-X
-                            case 393694545688133634: // Rank-W
-                                queue = RLQueue.DuelQueue(channel, true);
-                                break;
-                            case 412888290027634688: // Unranked
-                                queue = RLQueue.DuelQueue(channel, false);
-                                break;
-                            case 393695480946622465: // 2v2 Rank-A
-                            case 393695741941514240: // Rank-Z
-                            case 393695923026526208: // Rank-Y
-                            case 393696051607109632: // Rank-X
-                            case 393696168300773386: // Rank-W
-                                queue = RLQueue.DoublesQueue(channel, true);
-                                break;
-                            case 412888411855388672: // Unranked
-                                queue = RLQueue.DoublesQueue(channel, false);
-                                break;
-                            case 386213046672162838: // 3v3 Rank-A
-                            case 375039923603898369: // Rank-Z
-                            case 385070323449462785: // Rank-Y
-                            case 385420072996438021: // Rank-X
-                            case 385393503833948160: // Rank-W
-                                queue = RLQueue.StandardQueue(channel, true);
-                                break;
-                            case 412888426837180418: // Unranked
-                                queue = RLQueue.StandardQueue(channel, false);
-                                break;
-                        }
+                    case "2v2":
+                        queue = RLQueue.DoublesQueue(channel, ranked);
+                        break;
+                    case "3v3":
+                        queue = RLQueue.StandardQueue(channel, ranked);
                         break;
                     default:
-                        await ReplyAsync("Queue's can currently only be used in the Cross-Net server and the test server.");
+                        await ReplyAsync("This is not valid queue type.");
                         return;
-                }
-
-                if (queue == null)
-                {
-                    await ReplyAsync("This command can only be used in the `1v1`, `2v2` and `3v3` channels.");
-                    return;
                 }
 
                 if (queues.TryAdd(Context.Channel.Id, queue))
@@ -119,12 +75,11 @@ namespace RLBot.Modules
         [Summary("Join the queue for 6man games")]
         [Remarks("qjoin")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
-            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
-            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
-            385393503833948160, 412888426837180418)]
+        [RequireChannel("1v1", "2v2", "3v3")]
         public async Task JoinQueueAsync()
         {
+            var author = Context.Message.Author as SocketGuildUser;
+
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
             {
                 await ReplyAsync(NOT_OPEN);
@@ -133,18 +88,23 @@ namespace RLBot.Modules
 
             if (queue.Users.Count < queue.GetSize())
             {
-                if (!queue.Users.ContainsKey(Context.Message.Author.Id))
+                if (CanPlayerJoinQueue(author, queue))
                 {
-                    if (queue.Users.TryAdd(Context.Message.Author.Id, Context.Message.Author))
-                        await ReplyAsync($"{Context.Message.Author.Mention} joined the queue. {queue.Users.Count}/{queue.GetSize()}");
+                    if (!queue.Users.ContainsKey(author.Id))
+                    {
+                        if (queue.Users.TryAdd(author.Id, author))
+                            await ReplyAsync($"{author.Mention} joined the queue. {queue.Users.Count}/{queue.GetSize()}");
+                        else
+                            await ReplyAsync($"Failed to add {author.Mention} to the queue, please try again.");
+                    }
                     else
-                        await ReplyAsync($"Failed to add {Context.Message.Author} to the queue, please try again.");
+                        await ReplyAsync($"{author.Mention}, you've already joined the queue.");
                 }
                 else
-                    await ReplyAsync("You've already joined the queue.");
+                    await ReplyAsync($"{author.Mention}, you don't have the appropriate rank to join the queue.");
             }
             else
-                await ReplyAsync("The queue is full.");
+                await ReplyAsync($"{author.Mention}, the queue is full.");
         }
 
         [Command("qleave")]
@@ -152,22 +112,21 @@ namespace RLBot.Modules
         [Summary("Leave the queue for 6man games")]
         [Remarks("qleave")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
-            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
-            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
-            385393503833948160, 412888426837180418)]
+        [RequireChannel("1v1", "2v2", "3v3")]
         public async Task LeaveQueueAsync()
         {
+            var author = Context.Message.Author as SocketGuildUser;
+
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
             {
                 await ReplyAsync("There is no active queue.");
                 return;
             }
 
-            if (queue.Users.TryRemove(Context.Message.Author.Id, out SocketUser user))
-                await ReplyAsync($"{Context.Message.Author.Mention} left the queue. {queue.Users.Count}/{queue.GetSize()}");
+            if (queue.Users.TryRemove(author.Id, out SocketUser user))
+                await ReplyAsync($"{author.Mention} left the queue. {queue.Users.Count}/{queue.GetSize()}");
             else
-                await ReplyAsync($"{Context.Message.Author.Mention}, you're not in the current queue.");
+                await ReplyAsync($"{author.Mention}, you're not in the current queue.");
         }
         
         [Command("qstatus")]
@@ -175,10 +134,7 @@ namespace RLBot.Modules
         [Summary("Show a list of all the people in the queue")]
         [Remarks("qstatus")]
         [RequireBotPermission(GuildPermission.EmbedLinks)]
-        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
-            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
-            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
-            385393503833948160, 412888426837180418)]
+        [RequireChannel("1v1", "2v2", "3v3")]
         public async Task ListOfPlayersInQueueAsync()
         {
             if (!queues.TryGetValue(Context.Channel.Id, out RLQueue queue))
@@ -205,23 +161,21 @@ namespace RLBot.Modules
         [Summary("Substitue one player for another in a queue")]
         [Remarks("qsub <queue ID> <@substitute> <@current player>")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
-            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
-            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
-            385393503833948160, 412888426837180418)]
+        [RequireChannel("1v1", "2v2", "3v3")]
         public async Task SubstitutePlayerAsync(long queueId, SocketUser subPlayer, SocketUser currentPlayer)
         {
+            var author = Context.Message.Author;
             try
             {
                 if (subPlayer.Id == currentPlayer.Id)
                 {
-                    await ReplyAsync("You cannot sub the user for himself!");
+                    await ReplyAsync($"{author.Mention}, you cannot sub the user for himself!");
                     return;
                 }
 
                 if (subPlayer.IsBot || currentPlayer.IsBot)
                 {
-                    await ReplyAsync("You can't sub a bot into a queue!");
+                    await ReplyAsync($"{author.Mention}, you can't sub a bot into a queue!");
                     return;
                 }
 
@@ -229,21 +183,21 @@ namespace RLBot.Modules
                 var queue = await Database.GetQueueAsync(queueId);
                 if (queue == null)
                 {
-                    await ReplyAsync($"Didn't find queue {queueId}");
+                    await ReplyAsync($"{author.Mention}, queue {queueId} doesn't exist!");
                     return;
                 }
 
                 // check if queue score is not yet set
                 if (queue.ScoreTeamA != 0 || queue.ScoreTeamB != 0)
                 {
-                    await ReplyAsync($"The score for queue {queueId} has already been submitted, so players can't be substituted anymore");
+                    await ReplyAsync($"{author.Mention}, the score for queue {queueId} has already been submitted, so players can't be substituted anymore!");
                     return;
                 }
 
                 List<QueuePlayer> players = await Database.GetQueuePlayersAsync(queueId);
                 if (players.Count == 0)
                 {
-                    await ReplyAsync($"Failed to retrieve the players from queue {queueId}, please try again.");
+                    await ReplyAsync($"{author.Mention}, failed to retrieve the players from queue {queueId}, please try again.");
                     return;
                 }
 
@@ -257,20 +211,20 @@ namespace RLBot.Modules
                     }
                     else if (rec.UserId == subPlayer.Id)
                     {
-                        await ReplyAsync($"The player {subPlayer}, who is to be subbed in is already in queue {queueId}");
+                        await ReplyAsync($"{author.Mention}, the player {subPlayer}, who is to be subbed in is already in queue {queueId}");
                         return;
                     }
                 }
 
                 if (currentInQueue == null)
                 {
-                    await ReplyAsync($"The player {currentPlayer}, who is to be subbed out is not in queue {queueId}");
+                    await ReplyAsync($"{author.Mention}, the player {currentPlayer}, who is to be subbed out is not in queue {queueId}");
                     return;
                 }
 
                 if (Context.Message.Author.Id != RLBot.APPLICATION_OWNER_ID && players.SingleOrDefault(x => x.UserId == Context.Message.Author.Id).Team != currentInQueue.Team)
                 {
-                    await ReplyAsync($"{Context.Message.Author.Mention}, you can only substitue players from your own team!");
+                    await ReplyAsync($"{author.Mention}, you can only substitute players from your own team!");
                     return;
                 }
 
@@ -293,10 +247,7 @@ namespace RLBot.Modules
         [Summary("Removes the current queue")]
         [Remarks("qreset")]
         [RequireBotPermission(GuildPermission.SendMessages)]
-        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
-            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
-            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
-            385393503833948160, 412888426837180418)]
+        [RequireChannel("1v1", "2v2", "3v3")]
         public async Task ResetQueueAsync()
         {
             if (!queues.TryRemove(Context.Channel.Id, out RLQueue queue))
@@ -314,10 +265,7 @@ namespace RLBot.Modules
         [Summary("Randomly divide the players into 2 even teams")]
         [Remarks("qpick")]
         [RequireBotPermission(GuildPermission.ManageChannels | GuildPermission.MoveMembers | GuildPermission.EmbedLinks)]
-        [RequireChannel(/* test channels */ 393411399654703115, 393411426451980289, 384666738056232970,
-            /* live channels */ 393692333469597696, 393693176772296704, 393693726565728257, 393694545688133634, 412888290027634688, 393695480946622465, 393695741941514240,
-            393695923026526208, 393696051607109632, 393696168300773386, 412888411855388672, 386213046672162838, 375039923603898369, 385070323449462785, 385420072996438021,
-            385393503833948160, 412888426837180418)]
+        [RequireChannel("1v1", "2v2", "3v3")]
         public async Task PickTeamsFromQueueAsync()
         {
             try
@@ -327,91 +275,103 @@ namespace RLBot.Modules
                     await ReplyAsync(NOT_OPEN);
                     return;
                 }
-
+                
                 // remove offline users from the queue
+                string offline = "Removed offline users from the queue: ";
+                List<SocketUser> offlineUsers = new List<SocketUser>();
                 foreach (SocketUser user in queue.Users.Values)
-                    if (user.Status == UserStatus.Offline) queue.Users.TryRemove(user.Id, out SocketUser removedOfflineUser);
+                {
+                    if (user.Status == UserStatus.Offline && queue.Users.TryRemove(user.Id, out SocketUser removedOfflineUser))
+                        offlineUsers.Add(removedOfflineUser);
+                }
+
+                if (offlineUsers.Any())
+                {
+                    await ReplyAsync($"The following offline users have been removed from the queue: {string.Join(" ,", offlineUsers)} {queue.Users.Count}/{queue.GetSize()}");
+                    return;
+                }
 
                 if (queue.Users.Count == queue.GetSize())
                 {
-                    string mentions = string.Join(", ", queue.Users.Values.Select(x => x.Mention));
-                    var users = queue.Users.Values.ToList();
+                    await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
+                    return;
+                }
 
-                    List<SocketUser> team_a = new List<SocketUser>();
-                    List<SocketUser> team_b = new List<SocketUser>();
-                    for (int i = 0; i < queue.GetSize(); i++)
-                    {
-                        int rng = rnd.Next(0, queue.Users.Count);
-                        var rngUser = users[rng];
-                        if (i % 2 == 0)
-                            team_a.Add(rngUser);
-                        else
-                            team_b.Add(rngUser);
+                string mentions = string.Join(", ", queue.Users.Values.Select(x => x.Mention));
+                var users = queue.Users.Values.ToList();
 
-                        users.Remove(rngUser);
-
-                        // remove this user from every queue he might be in
-                        var queuesUserIsIn = queues.Values?.Where(x => x.Users.ContainsKey(rngUser.Id));
-                        foreach (RLQueue joinedQueue in queuesUserIsIn)
-                        {
-                            joinedQueue?.Users.TryRemove(rngUser.Id, out SocketUser removedUser);
-                        }
-                    }
-
-                    queues.TryRemove(Context.Channel.Id, out RLQueue removedQueue);
-
-                    var embedBuilder = new EmbedBuilder()
-                        .WithColor(RLBot.EMBED_COLOR)
-                        .WithTitle($"{queue.Playlist} teams")
-                        .AddField("Team A", $"{string.Join("\n", team_a.Select(x => x.Mention))}", true)
-                        .AddField("Team B", $"{string.Join("\n", team_b.Select(x => x.Mention))}", true)
-                        .AddField("Match host", team_a[0].Mention);
-
-                    string matchDetails = $"**__Match details__**\n";
-                    if (queue.IsLeaderboardQueue)
-                    {
-                        long queueId = await Database.InsertQueueAsync(queue.Playlist, team_a, team_b);
-
-                        embedBuilder.AddField("ID", queueId);
-                        embedBuilder.WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult {queueId} <score A> <score B>");
-
-                        await ReplyAsync(mentions, false, embedBuilder.Build());
-
-                        if (queue.Playlist != RLPlaylist.Duel)
-                        {
-                            // create voice channels, set player permissions and move the players into the channels
-                            var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
-                            var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
-
-                            await Task.WhenAll(teamA, teamB);
-                        }
-
-                        matchDetails += $"**ID:** {queueId}\n**Name:** CNQ{queueId}\n";
-                    }
+                List<SocketUser> team_a = new List<SocketUser>();
+                List<SocketUser> team_b = new List<SocketUser>();
+                for (int i = 0; i < queue.GetSize(); i++)
+                {
+                    int rng = rnd.Next(0, queue.Users.Count);
+                    var rngUser = users[rng];
+                    if (i % 2 == 0)
+                        team_a.Add(rngUser);
                     else
-                    {
-                        await ReplyAsync(mentions, false, embedBuilder.Build());
-                        matchDetails += $"**Name:** CNQ{rnd.Next(100, 100000)}\n";
-                    }
+                        team_b.Add(rngUser);
 
-                    // DM all the players in the queue the server details
-                    matchDetails += $"**Password:** {GeneratePassword()}";
-                    foreach (SocketUser user in team_a.Union(team_b))
+                    users.Remove(rngUser);
+
+                    // remove this user from every queue he might be in
+                    var queuesUserIsIn = queues.Values?.Where(x => x.Users.ContainsKey(rngUser.Id));
+                    foreach (RLQueue joinedQueue in queuesUserIsIn)
                     {
-                        try
-                        {
-                            var DMChannel = await user.GetOrCreateDMChannelAsync();
-                            await DMChannel.SendMessageAsync(matchDetails);
-                        }
-                        catch (HttpException ex)
-                        when (ex.DiscordCode == 50007)
-                        {
-                            await ReplyAsync($"{user.Mention}, you are blocking DM's, unable to provide the match details.");
-                        }
+                        joinedQueue?.Users.TryRemove(rngUser.Id, out SocketUser removedUser);
                     }
                 }
+
+                queues.TryRemove(Context.Channel.Id, out RLQueue removedQueue);
+
+                var embedBuilder = new EmbedBuilder()
+                    .WithColor(RLBot.EMBED_COLOR)
+                    .WithTitle($"{queue.Playlist} teams")
+                    .AddField("Team A", $"{string.Join("\n", team_a.Select(x => x.Mention))}", true)
+                    .AddField("Team B", $"{string.Join("\n", team_b.Select(x => x.Mention))}", true)
+                    .AddField("Match host", team_a[0].Mention);
+
+                string matchDetails = $"**__Match details__**\n";
+                if (queue.IsLeaderboardQueue)
+                {
+                    long queueId = await Database.InsertQueueAsync(queue.Playlist, team_a, team_b);
+
+                    embedBuilder.AddField("ID", queueId);
+                    embedBuilder.WithFooter($"Submit the result using {RLBot.COMMAND_PREFIX}qresult {queueId} <score A> <score B>");
+
+                    await ReplyAsync(mentions, false, embedBuilder.Build());
+
+                    if (queue.Playlist != RLPlaylist.Duel)
+                    {
+                        // create voice channels, set player permissions and move the players into the channels
+                        var teamA = CreateTeamVoiceChannelAsync(queueId, "Team A", team_a);
+                        var teamB = CreateTeamVoiceChannelAsync(queueId, "Team B", team_b);
+
+                        await Task.WhenAll(teamA, teamB);
+                    }
+
+                    matchDetails += $"**ID:** {queueId}\n**Name:** CNQ{queueId}\n";
+                }
                 else
-                    await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
+                {
+                    await ReplyAsync(mentions, false, embedBuilder.Build());
+                    matchDetails += $"**Name:** CNQ{rnd.Next(100, 100000)}\n";
+                }
+
+                // DM all the players in the queue the server details
+                matchDetails += $"**Password:** {GeneratePassword()}";
+                foreach (SocketUser user in team_a.Union(team_b))
+                {
+                    try
+                    {
+                        var DMChannel = await user.GetOrCreateDMChannelAsync();
+                        await DMChannel.SendMessageAsync(matchDetails);
+                    }
+                    catch (HttpException ex)
+                    when (ex.DiscordCode == 50007)
+                    {
+                        await ReplyAsync($"{user.Mention}, you are blocking DM's, unable to provide the match details.");
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -729,6 +689,18 @@ namespace RLBot.Modules
                 newElo = 0;
             
             return newElo;
+        }
+
+        private bool CanPlayerJoinQueue(SocketUser player, RLQueue queue)
+        {
+            if (!queue.IsLeaderboardQueue) return true;
+
+            SocketGuildUser user = player as SocketGuildUser;
+            var rank = Global.GetChannelRankRequirement(queue.Channel.Id);
+            if (rank == null)
+                throw new RLException($"Couldn't retrieve the rank requirement! ({queue.Channel.Id})");
+
+            return user.Roles.Select(x => x.Id).Contains(rank.RoleID);
         }
     }
 }

@@ -186,6 +186,7 @@
       <HintPath>..\packages\System.Security.Cryptography.X509Certificates.4.3.0\lib\net461\System.Security.Cryptography.X509Certificates.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -202,10 +203,11 @@
     <Compile Include="Data\Models\Invite.cs" />
     <Compile Include="Data\Models\Queue.cs" />
     <Compile Include="Data\Models\UserInfo.cs" />
+    <Compile Include="Exceptions\RLException.cs" />
     <Compile Include="Models\RLPlaylist.cs" />
     <Compile Include="Models\RLRank.cs" />
     <Compile Include="Models\RLRegion.cs" />
-    <Compile Include="Preconditions\RequireChannelAtribute.cs" />
+    <Compile Include="Preconditions\RequireChannelAttribute.cs" />
     <Compile Include="Services\InviteService.cs" />
     <Compile Include="Services\ReliabilityService.cs" />
     <Compile Include="Data\Models\Leaderboard.cs" />
