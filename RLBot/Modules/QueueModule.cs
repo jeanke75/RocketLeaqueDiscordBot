@@ -291,7 +291,7 @@ namespace RLBot.Modules
                     return;
                 }
 
-                if (queue.Users.Count == queue.GetSize())
+                if (queue.Users.Count != queue.GetSize())
                 {
                     await ReplyAsync(string.Format(NOT_ENOUGH_PLAYERS, queue.Users.Count, queue.GetSize()));
                     return;
