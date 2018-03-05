@@ -20,6 +20,11 @@ namespace RLBot.Data
             var duelY = new RLRank(407225057677410304, 1156);
             var duelZ = new RLRank(407225054590664729, 1309);
             var duelA = new RLRank(407225051968962590, 1401);
+            duelRanks.Add(duelW);
+            duelRanks.Add(duelX);
+            duelRanks.Add(duelY);
+            duelRanks.Add(duelZ);
+            duelRanks.Add(duelA);
 
             List<RLRank> doublesRanks = new List<RLRank>();
             var doublesW = new RLRank(407224786956189696, 0);
@@ -27,6 +32,11 @@ namespace RLBot.Data
             var doublesY = new RLRank(407224549801984001, 1196);
             var doublesZ = new RLRank(407224239079424031, 1396);
             var doublesA = new RLRank(407224039363444736, 1551);
+            doublesRanks.Add(doublesW);
+            doublesRanks.Add(doublesX);
+            doublesRanks.Add(doublesY);
+            doublesRanks.Add(doublesW);
+            doublesRanks.Add(doublesA);
 
             List<RLRank> standardRanks = new List<RLRank>();
             var standardW = new RLRank(373857511146782721, 0);
@@ -34,6 +44,11 @@ namespace RLBot.Data
             var standardY = new RLRank(375035896753553409, 1196);
             var standardZ = new RLRank(373857123110617099, 1396);
             var standardA = new RLRank(386211454040276992, 1551);
+            standardRanks.Add(standardW);
+            standardRanks.Add(standardX);
+            standardRanks.Add(standardY);
+            standardRanks.Add(standardZ);
+            standardRanks.Add(standardA);
 
             _playlistRanks.Add(RLPlaylist.Duel, duelRanks);
             _playlistRanks.Add(RLPlaylist.Doubles, doublesRanks);

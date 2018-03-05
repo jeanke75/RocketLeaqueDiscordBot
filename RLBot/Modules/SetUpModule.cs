@@ -113,7 +113,7 @@ namespace RLBot.Modules
                 // try to add the user to the database with their current elo
                 await Database.UpdateUserInfoAsync(user.Id, (short)rp1, (short)rp2, (short)rp3);
 
-                // give the rolse to the user
+                // give the roles to the user
                 await user.AddRolesAsync(roles);
 
                 await ReplyAsync($"{user.Mention}, new playlists have been linked!");
@@ -168,7 +168,9 @@ namespace RLBot.Modules
                 {
                     embedBuilder.AddField("1V1", GetRankString(duel.Tier) + $" ({duel.RankPoints})", true);
                     rp1 = duel.RankPoints;
-                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Duel, duel.RankPoints).RoleID));
+                    var test1 = Global.GetRank(RlsPlaylistRanked.Duel, duel.RankPoints);
+                    var role = Context.Guild.GetRole(test1.RoleID);
+                    roles.Add(role);
                 }
                 else
                 {
