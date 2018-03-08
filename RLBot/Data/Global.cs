@@ -35,7 +35,7 @@ namespace RLBot.Data
             doublesRanks.Add(doublesW);
             doublesRanks.Add(doublesX);
             doublesRanks.Add(doublesY);
-            doublesRanks.Add(doublesW);
+            doublesRanks.Add(doublesZ);
             doublesRanks.Add(doublesA);
 
             List<RLRank> standardRanks = new List<RLRank>();

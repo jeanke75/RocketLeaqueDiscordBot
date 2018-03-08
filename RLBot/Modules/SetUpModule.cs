@@ -168,9 +168,7 @@ namespace RLBot.Modules
                 {
                     embedBuilder.AddField("1V1", GetRankString(duel.Tier) + $" ({duel.RankPoints})", true);
                     rp1 = duel.RankPoints;
-                    var test1 = Global.GetRank(RlsPlaylistRanked.Duel, duel.RankPoints);
-                    var role = Context.Guild.GetRole(test1.RoleID);
-                    roles.Add(role);
+                    roles.Add(Context.Guild.GetRole(Global.GetRank(RlsPlaylistRanked.Duel, duel.RankPoints).RoleID));
                 }
                 else
                 {
