@@ -277,7 +277,6 @@ namespace RLBot.Modules
                 }
                 
                 // remove offline users from the queue
-                string offline = "Removed offline users from the queue: ";
                 List<SocketUser> offlineUsers = new List<SocketUser>();
                 foreach (SocketUser user in queue.Users.Values)
                 {

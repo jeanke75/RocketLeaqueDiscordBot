@@ -45,7 +45,7 @@ namespace RLBot.Services
                     foreach (IUser inviter in inviters)
                     {
                         var inviteTotal = usedInviteLinks.Where(x => x.Inviter.Id == inviter.Id).Sum(x => x.Uses);
-                        _currentState.TryAdd(inviter.Id, inviteTotal);
+                        _currentState.TryAdd(inviter.Id, inviteTotal ?? 0);
                     }
 
                     _client.UserJoined += UserJoinedAsync;

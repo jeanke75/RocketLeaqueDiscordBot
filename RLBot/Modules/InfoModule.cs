@@ -22,7 +22,7 @@ namespace RLBot.Modules
         {
             var application = await Context.Client.GetApplicationInfoAsync();
 
-            var generalPermissions = GuildPermission.ManageRoles | GuildPermission.ManageChannels | GuildPermission.CreateInstantInvite | GuildPermission.ChangeNickname | GuildPermission.ReadMessages;
+            var generalPermissions = GuildPermission.ManageRoles | GuildPermission.ManageChannels | GuildPermission.CreateInstantInvite | GuildPermission.ChangeNickname | GuildPermission.ViewChannel;
             var textPermissions = GuildPermission.SendMessages | GuildPermission.ManageMessages | GuildPermission.EmbedLinks | GuildPermission.AttachFiles | GuildPermission.ReadMessageHistory | GuildPermission.MentionEveryone | GuildPermission.UseExternalEmojis | GuildPermission.AddReactions;
             var voicePermissions = GuildPermission.MoveMembers;
             var requiredPermissions = (int)(generalPermissions | textPermissions | voicePermissions);
