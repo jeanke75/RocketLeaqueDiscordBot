@@ -30,16 +30,16 @@ namespace RLBot
             _client = new DiscordSocketClient(new DiscordSocketConfig{
                 LogLevel = LogSeverity.Info
             });
-            _commands = new CommandService();
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly());
-            _commands.AddTypeReader<RLPlaylist>(new RLPlatformTypeReader());
-            _commands.AddTypeReader<RLRegion>(new RLRegionTypeReader());
-            _commands.AddTypeReader<RLPlaylist>(new RLPlaylistTypeReader());
-            
+
             var serv = InstallServices();
             serv.GetRequiredService<ReliabilityService>();
             serv.GetRequiredService<CommandHandlerService>();
             serv.GetRequiredService<InviteService>();
+
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), serv);
+            _commands.AddTypeReader<RLPlaylist>(new RLPlatformTypeReader());
+            _commands.AddTypeReader<RLRegion>(new RLRegionTypeReader());
+            _commands.AddTypeReader<RLPlaylist>(new RLPlaylistTypeReader());
 
             _client.Log += Log;
             _commands.Log += Log;
@@ -54,6 +54,8 @@ namespace RLBot
 
         private IServiceProvider InstallServices()
         {
+            _commands = new CommandService();
+
             return new ServiceCollection()
                 .AddSingleton(_client)
                 .AddSingleton(_commands)
