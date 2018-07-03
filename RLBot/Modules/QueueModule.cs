@@ -514,8 +514,8 @@ namespace RLBot.Modules
                 var playerIds = players.Select(x => x.UserId).ToList();
                 while ((DateTime.Now - startTime).TotalMinutes < 10)
                 {
-                    var checkUsersTask = msg.GetReactionUsersAsync(check);
-                    var cancelUsersTask = msg.GetReactionUsersAsync(cancel);
+                    var checkUsersTask = msg.GetReactionUsersAsync(check, 100).FlattenAsync();
+                    var cancelUsersTask = msg.GetReactionUsersAsync(cancel, 100).FlattenAsync();
                     await Task.WhenAll(checkUsersTask, cancelUsersTask);
 
                     var checkUsers = await checkUsersTask;
